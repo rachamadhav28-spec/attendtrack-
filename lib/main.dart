@@ -387,8 +387,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     await prefs.setString('semester', _selectedSemester);
     await prefs.setString('state', _selectedState);
     await prefs.setString('college', collegeName);
-    await prefs.setString(
-      'subjects',
+    if (prefs.getString('subjects') == null) {
+     await prefs.setString(
+       'subjects',
+       jsonEncode(_initialSubjects.map((s) => s.toJson()).toList()),
+     );
+   }
       jsonEncode(_initialSubjects.map((s) => s.toJson()).toList()),
     );
     await prefs.setBool('is_onboarded', true);
