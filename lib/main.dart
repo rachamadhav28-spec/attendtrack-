@@ -10,6 +10,17 @@ void main() {
   runApp(const AttendTrackApp());
 }
 
+// ============================================================================
+// HELPERS
+// ============================================================================
+String _dateKey(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
+
+Color _statusColor(double pct) {
+  if (pct >= 75.0) return const Color(0xFF22C55E); // Safe green
+  if (pct >= 65.0) return const Color(0xFFF59E0B); // Condonation amber
+  return const Color(0xFFEF4444); // Shortage red
+}
+
 class AttendTrackApp extends StatelessWidget {
   const AttendTrackApp({super.key});
 
@@ -34,7 +45,7 @@ class AttendTrackApp extends StatelessWidget {
 }
 
 // ============================================================================
-// ALL STATES & COLLEGES DATABASE (B.TECH vs DEGREE)
+// STATES & COLLEGES DATABASE
 // ============================================================================
 class IndiaCollegeDatabase {
   static const List<String> allStates = [
@@ -164,10 +175,10 @@ class IndiaCollegeDatabase {
       'University College of Science, Saifabad (OU)',
       'Loyola Academy Degree & PG College, Alwal',
       'St. Francis College for Women, Begumpet',
-      'St. Ann\'s College for Women, Mehdipatnam',
-      'Bhavan\'s Vivekananda College, Sainikpuri',
+      "St. Ann's College for Women, Mehdipatnam",
+      "Bhavan's Vivekananda College, Sainikpuri",
       'Badruka College of Commerce & Arts, Kachiguda',
-      'Aurora\'s Degree & PG College, Chikkadpally',
+      "Aurora's Degree & PG College, Chikkadpally",
       'AV College of Arts, Science & Commerce, Hyderabad',
       'Kakatiya Government Degree College, Hanamkonda',
       'Government City College, Nayapul, Hyderabad',
@@ -178,7 +189,7 @@ class IndiaCollegeDatabase {
       'Andhra Loyola College, Vijayawada',
       'PB Siddhartha College of Arts & Science, Vijayawada',
       'Dr. Lankapalli Bullayya College, Visakhapatnam',
-      'St. Joseph\'s College for Women, Visakhapatnam',
+      "St. Joseph's College for Women, Visakhapatnam",
       'PR Government College, Kakinada',
       'Government College (Autonomous), Rajahmundry',
       'Silver Jubilee Government College, Kurnool',
@@ -187,7 +198,7 @@ class IndiaCollegeDatabase {
     ],
     'Karnataka': [
       'Christ University, Bengaluru',
-      'St. Joseph\'s University, Bengaluru',
+      "St. Joseph's University, Bengaluru",
       'Mount Carmel College, Bengaluru',
       'Kristu Jayanti College, Bengaluru',
       'Jain University, Bengaluru',
@@ -202,7 +213,7 @@ class IndiaCollegeDatabase {
       'Ethiraj College for Women, Chennai',
     ],
     'Maharashtra': [
-      'St. Xavier\'s College, Mumbai',
+      "St. Xavier's College, Mumbai",
       'Fergusson College, Pune',
       'Jai Hind College, Mumbai',
       'Narsee Monjee College of Commerce & Economics, Mumbai',
@@ -210,7 +221,7 @@ class IndiaCollegeDatabase {
       'Symbiosis College of Arts & Commerce, Pune',
     ],
     'Delhi (NCT)': [
-      'St. Stephen\'s College, Delhi University',
+      "St. Stephen's College, Delhi University",
       'Hindu College, Delhi University',
       'Shri Ram College of Commerce (SRCC), DU',
       'Hansraj College, Delhi University',
@@ -233,7 +244,7 @@ class IndiaCollegeDatabase {
 }
 
 // ============================================================================
-// DATA MODELS
+// DATA MODEL
 // ============================================================================
 class SubjectModel {
   String name;
@@ -249,18 +260,16 @@ class SubjectModel {
   double get percentage =>
       totalHours == 0 ? 100.0 : (attendedHours / totalHours) * 100.0;
 
-  // How many hours can the student safely bunk and stay >= 75%?
+  // How many hours can be skipped and still stay >= 75%?
   int get safeBunkHours {
     if (totalHours == 0 || percentage < 75.0) return 0;
-    // (attended) / (total + x) >= 0.75 => x <= (attended / 0.75) - total
     return ((attendedHours / 0.75) - totalHours).floor();
   }
 
-  // How many continuous hours must the student attend to reach 75%?
+  // How many continuous hours must be attended to reach 75%?
   int get requiredHoursFor75 {
     if (totalHours == 0 || percentage >= 75.0) return 0;
-    // (attended + x) / (total + x) >= 0.75 => 0.25x >= 0.75*total - attended => x >= 3*total - 4*attended
-    int needed = (3 * totalHours) - (4 * attendedHours);
+    final needed = (3 * totalHours) - (4 * attendedHours);
     return needed > 0 ? needed : 1;
   }
 
@@ -271,14 +280,14 @@ class SubjectModel {
       };
 
   factory SubjectModel.fromJson(Map<String, dynamic> json) => SubjectModel(
-        name: json['name'] ?? '',
-        attendedHours: json['attendedHours'] ?? 0,
-        totalHours: json['totalHours'] ?? 0,
+        name: (json['name'] ?? '') as String,
+        attendedHours: (json['attendedHours'] ?? 0) as int,
+        totalHours: (json['totalHours'] ?? 0) as int,
       );
 }
 
 // ============================================================================
-// ROOT DECIDER (ONBOARDING VS DASHBOARD)
+// ROOT DECIDER (ONBOARDING vs DASHBOARD)
 // ============================================================================
 class RootDecider extends StatefulWidget {
   const RootDecider({super.key});
@@ -289,6 +298,7 @@ class RootDecider extends StatefulWidget {
 
 class _RootDeciderState extends State<RootDecider> {
   bool? _isOnboarded;
+  bool _isEditing = false;
 
   @override
   void initState() {
@@ -298,6 +308,7 @@ class _RootDeciderState extends State<RootDecider> {
 
   Future<void> _checkOnboarding() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() {
       _isOnboarded = prefs.getBool('is_onboarded') ?? false;
     });
@@ -308,25 +319,42 @@ class _RootDeciderState extends State<RootDecider> {
     if (_isOnboarded == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    return _isOnboarded!
-        ? MainHomeScreen(onResetProfile: () => setState(() => _isOnboarded = false))
-        : OnboardingScreen(onFinished: () => setState(() => _isOnboarded = true));
+    if (_isOnboarded!) {
+      return MainHomeScreen(
+        onEditProfile: () => setState(() {
+          _isEditing = true;
+          _isOnboarded = false;
+        }),
+      );
+    }
+    return OnboardingScreen(
+      isEditing: _isEditing,
+      onFinished: () => setState(() {
+        _isOnboarded = true;
+        _isEditing = false;
+      }),
+    );
   }
 }
 
 // ============================================================================
-// STEP 1: ONBOARDING (B.TECH / DEGREE, YEAR, STATE, COLLEGE, SUBJECTS)
+// ONBOARDING (FIRST SETUP + EDIT PROFILE, KEEPS ATTENDANCE WHEN EDITING)
 // ============================================================================
 class OnboardingScreen extends StatefulWidget {
   final VoidCallback onFinished;
-  const OnboardingScreen({super.key, required this.onFinished});
+  final bool isEditing;
+  const OnboardingScreen({
+    super.key,
+    required this.onFinished,
+    this.isEditing = false,
+  });
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  String _selectedCourse = 'B.Tech'; // 'B.Tech' or 'Degree'
+  String _selectedCourse = 'B.Tech';
   String _selectedYear = '1st Year';
   String _selectedSemester = 'Semester 1';
   String _selectedState = 'Telangana';
@@ -335,7 +363,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final TextEditingController _customCollegeCtrl = TextEditingController();
   final TextEditingController _collegeSearchCtrl = TextEditingController();
 
-  final List<SubjectModel> _initialSubjects = [
+  List<SubjectModel> _subjects = [
     SubjectModel(name: 'Mathematics'),
     SubjectModel(name: 'Programming in C'),
     SubjectModel(name: 'Programming Lab'),
@@ -347,19 +375,65 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.initState();
     _selectedCollege =
         IndiaCollegeDatabase.getColleges(_selectedCourse, _selectedState).first;
+    if (widget.isEditing) _loadExisting();
+  }
+
+  @override
+  void dispose() {
+    _customCollegeCtrl.dispose();
+    _collegeSearchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _snack(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   List<String> get _years => _selectedCourse == 'B.Tech'
       ? ['1st Year', '2nd Year', '3rd Year', '4th Year']
       : ['1st Year', '2nd Year', '3rd Year'];
 
+  void _ensureYearValid() {
+    if (!_years.contains(_selectedYear)) _selectedYear = '1st Year';
+  }
+
   void _onCourseOrStateChanged() {
+    _ensureYearValid();
     final colleges =
         IndiaCollegeDatabase.getColleges(_selectedCourse, _selectedState);
-    if (!_years.contains(_selectedYear)) {
-      _selectedYear = '1st Year';
-    }
     _selectedCollege = colleges.isNotEmpty ? colleges.first : null;
+  }
+
+  // Load saved profile + subjects (with attendance) when editing
+  Future<void> _loadExisting() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('subjects');
+    if (!mounted) return;
+    setState(() {
+      _selectedCourse = prefs.getString('course') ?? _selectedCourse;
+      _selectedYear = prefs.getString('year') ?? _selectedYear;
+      _selectedSemester = prefs.getString('semester') ?? _selectedSemester;
+      _selectedState = prefs.getString('state') ?? _selectedState;
+      _ensureYearValid();
+
+      final savedCollege = prefs.getString('college') ?? '';
+      final list =
+          IndiaCollegeDatabase.getColleges(_selectedCourse, _selectedState);
+      if (list.contains(savedCollege)) {
+        _useCustomCollege = false;
+        _selectedCollege = savedCollege;
+      } else {
+        _useCustomCollege = true;
+        _customCollegeCtrl.text = savedCollege;
+      }
+
+      if (raw != null) {
+        final decoded = jsonDecode(raw) as List<dynamic>;
+        _subjects = decoded
+            .map((e) => SubjectModel.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList();
+      }
+    });
   }
 
   Future<void> _saveAndStart() async {
@@ -368,16 +442,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         : (_selectedCollege ?? '');
 
     if (collegeName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select or type your college name')),
-      );
+      _snack('Please select or type your college name');
       return;
     }
-
-    if (_initialSubjects.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Add at least 1 subject to start')),
-      );
+    if (_subjects.isEmpty) {
+      _snack('Add at least 1 subject to start');
       return;
     }
 
@@ -387,15 +456,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     await prefs.setString('semester', _selectedSemester);
     await prefs.setString('state', _selectedState);
     await prefs.setString('college', collegeName);
-    if (prefs.getString('subjects') == null) {
-     await prefs.setString(
-       'subjects',
-       jsonEncode(_initialSubjects.map((s) => s.toJson()).toList()),
-     );
-   }
-      jsonEncode(_initialSubjects.map((s) => s.toJson()).toList()),
+    await prefs.setString(
+      'subjects',
+      jsonEncode(_subjects.map((s) => s.toJson()).toList()),
     );
     await prefs.setBool('is_onboarded', true);
+
+    if (!mounted) return;
     widget.onFinished();
   }
 
@@ -454,10 +521,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             onPressed: () {
               final name = nameCtrl.text.trim();
               if (name.isEmpty) return;
-              final att = int.tryParse(attendedCtrl.text) ?? 0;
               final tot = int.tryParse(totalCtrl.text) ?? 0;
+              final att = int.tryParse(attendedCtrl.text) ?? 0;
               setState(() {
-                _initialSubjects.add(SubjectModel(
+                _subjects.add(SubjectModel(
                   name: name,
                   attendedHours: att <= tot ? att : tot,
                   totalHours: tot,
@@ -470,6 +537,48 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ],
       ),
     );
+  }
+
+  // Applies a share code from a CR/friend. Keeps hours for subjects whose
+  // names already exist, so importing never erases attendance.
+  Future<void> _applyImport(String code) async {
+    final data = jsonDecode(utf8.decode(base64Decode(code.trim())))
+        as Map<String, dynamic>;
+    final course = data['course'] as String?;
+    final state = data['state'] as String?;
+    final year = data['year'] as String?;
+    final college = (data['college'] as String?) ?? '';
+    final names = (data['subjects'] as List?) ?? [];
+    if (names.isEmpty) throw const FormatException('no subjects');
+    final holidays =
+        (data['holidays'] as List?)?.map((e) => e.toString()).toList();
+
+    final oldByName = {for (final s in _subjects) s.name: s};
+
+    setState(() {
+      if (course == 'B.Tech' || course == 'Degree') _selectedCourse = course!;
+      if (state != null && IndiaCollegeDatabase.allStates.contains(state)) {
+        _selectedState = state;
+      }
+      if (year != null) _selectedYear = year;
+      _onCourseOrStateChanged();
+      _useCustomCollege = college.isNotEmpty;
+      _customCollegeCtrl.text = college;
+      _subjects = names.map((n) {
+        final name = n.toString();
+        final old = oldByName[name];
+        return SubjectModel(
+          name: name,
+          attendedHours: old?.attendedHours ?? 0,
+          totalHours: old?.totalHours ?? 0,
+        );
+      }).toList();
+    });
+
+    if (holidays != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('holidays', holidays);
+    }
   }
 
   void _showImportFromFriendDialog() {
@@ -495,41 +604,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           FilledButton(
             onPressed: () async {
               try {
-                final decoded = utf8.decode(base64Decode(codeCtrl.text.trim()));
-                final Map<String, dynamic> data = jsonDecode(decoded);
-                final prefs = await SharedPreferences.getInstance();
-
-                setState(() {
-                  _selectedCourse = data['course'] ?? _selectedCourse;
-                  _selectedYear = data['year'] ?? _selectedYear;
-                  _selectedState = data['state'] ?? _selectedState;
-                  _useCustomCollege = true;
-                  _customCollegeCtrl.text = data['college'] ?? '';
-                  final List<dynamic> subNames = data['subjects'] ?? [];
-                  _initialSubjects
-                    ..clear()
-                    ..addAll(subNames.map((n) => SubjectModel(name: n.toString())));
-                });
-
-                if (data['holidays'] != null) {
-                  await prefs.setStringList(
-                    'holidays',
-                    List<String>.from(data['holidays']),
-                  );
-                }
-
+                await _applyImport(codeCtrl.text);
                 if (ctx.mounted) Navigator.pop(ctx);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Class subjects & holidays imported!'),
-                    ),
-                  );
-                }
+                _snack('Class subjects & holidays imported!');
               } catch (_) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Invalid share code. Please check again.')),
-                );
+                _snack('Invalid share code. Please check again.');
               }
             },
             child: const Text('Import'),
@@ -550,7 +629,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Welcome to AttendTrack 75%'),
+        title: Text(widget.isEditing
+            ? 'Edit Your Profile'
+            : 'Welcome to AttendTrack 75%'),
         actions: [
           TextButton.icon(
             onPressed: _showImportFromFriendDialog,
@@ -564,7 +645,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Course Selection (B.Tech vs Degree)
+            // 1. Course
             const Text(
               '1. Select Your Course',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -600,7 +681,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             const SizedBox(height: 20),
 
-            // 2. Year & Semester Selection
+            // 2. Year & Semester
             const Text(
               '2. Select Year & Semester',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -632,14 +713,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     items: ['Semester 1', 'Semester 2']
                         .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                         .toList(),
-                    onChanged: (val) => setState(() => _selectedSemester = val!),
+                    onChanged: (val) =>
+                        setState(() => _selectedSemester = val!),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 20),
 
-            // 3. All India State Selection
+            // 3. State
             const Text(
               '3. Select Your State',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -665,13 +747,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             const SizedBox(height: 20),
 
-            // 4. College Selection (Dynamic B.Tech vs Degree List)
+            // 4. College
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  '4. Select Your $_selectedCourse College',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                Expanded(
+                  child: Text(
+                    '4. Select Your $_selectedCourse College',
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                 ),
                 TextButton(
                   onPressed: () =>
@@ -696,7 +781,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               TextField(
                 controller: _collegeSearchCtrl,
                 decoration: InputDecoration(
-                  labelText: 'Search $_selectedCourse Colleges in $_selectedState',
+                  labelText:
+                      'Search $_selectedCourse Colleges in $_selectedState',
                   prefixIcon: const Icon(Icons.search),
                   border: const OutlineInputBorder(),
                 ),
@@ -706,7 +792,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               DropdownButtonFormField<String>(
                 value: filteredColleges.contains(_selectedCollege)
                     ? _selectedCollege
-                    : (filteredColleges.isNotEmpty ? filteredColleges.first : null),
+                    : (filteredColleges.isNotEmpty
+                        ? filteredColleges.first
+                        : null),
                 isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Select College',
@@ -723,7 +811,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ],
             const SizedBox(height: 24),
 
-            // 5. Subjects & Mid-Semester Hours
+            // 5. Subjects
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -739,7 +827,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            ..._initialSubjects.asMap().entries.map((entry) {
+            ..._subjects.asMap().entries.map((entry) {
               final idx = entry.key;
               final sub = entry.value;
               return Card(
@@ -748,13 +836,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   title: Text(sub.name),
                   subtitle: Text(
                     sub.totalHours > 0
-                        ? 'Past Attendance: ${sub.attendedHours}/${sub.totalHours} hrs (${sub.percentage.toStringAsFixed(1)}%)'
+                        ? 'Attendance: ${sub.attendedHours}/${sub.totalHours} hrs (${sub.percentage.toStringAsFixed(1)}%)'
                         : 'Starting fresh (0/0 hrs)',
                   ),
                   trailing: IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                    onPressed: () =>
-                        setState(() => _initialSubjects.removeAt(idx)),
+                    icon: const Icon(Icons.delete_outline,
+                        color: Colors.redAccent),
+                    onPressed: () => setState(() => _subjects.removeAt(idx)),
                   ),
                 ),
               );
@@ -767,9 +855,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: FilledButton.icon(
                 onPressed: _saveAndStart,
                 icon: const Icon(Icons.rocket_launch),
-                label: const Text(
-                  'Start Tracking My 75% Attendance',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                label: Text(
+                  widget.isEditing
+                      ? 'Save Changes'
+                      : 'Start Tracking My 75% Attendance',
+                  style:
+                      const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -781,11 +872,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 }
 
 // ============================================================================
-// MAIN HOME SCREEN (DASHBOARD + MONTHLY CALENDAR + SHARE)
+// MAIN HOME (DASHBOARD + CALENDAR + SHARE)
 // ============================================================================
 class MainHomeScreen extends StatefulWidget {
-  final VoidCallback onResetProfile;
-  const MainHomeScreen({super.key, required this.onResetProfile});
+  final VoidCallback onEditProfile;
+  const MainHomeScreen({super.key, required this.onEditProfile});
 
   @override
   State<MainHomeScreen> createState() => _MainHomeScreenState();
@@ -799,8 +890,8 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   String _state = '';
   String _college = '';
   List<SubjectModel> _subjects = [];
-  Set<String> _holidays = {}; // 'yyyy-MM-dd'
-  Map<String, List<String>> _dailyLogs = {}; // 'yyyy-MM-dd': ['Maths (+1h Present)']
+  Set<String> _holidays = {};
+  Map<String, List<String>> _dailyLogs = {};
 
   @override
   void initState() {
@@ -811,17 +902,19 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   Future<void> _loadData() async {
     final prefs = await SharedPreferences.getInstance();
     final subRaw = prefs.getString('subjects') ?? '[]';
-    final List<dynamic> decodedSubs = jsonDecode(subRaw);
     final logsRaw = prefs.getString('daily_logs') ?? '{}';
+    final List<dynamic> decodedSubs = jsonDecode(subRaw);
     final Map<String, dynamic> decodedLogs = jsonDecode(logsRaw);
-
+    if (!mounted) return;
     setState(() {
       _course = prefs.getString('course') ?? 'B.Tech';
       _year = prefs.getString('year') ?? '1st Year';
       _semester = prefs.getString('semester') ?? 'Semester 1';
       _state = prefs.getString('state') ?? 'Telangana';
       _college = prefs.getString('college') ?? '';
-      _subjects = decodedSubs.map((e) => SubjectModel.fromJson(e)).toList();
+      _subjects = decodedSubs
+          .map((e) => SubjectModel.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
       _holidays = (prefs.getStringList('holidays') ?? []).toSet();
       _dailyLogs = decodedLogs.map(
         (k, v) => MapEntry(k, List<String>.from(v as List)),
@@ -839,7 +932,10 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     await prefs.setString('daily_logs', jsonEncode(_dailyLogs));
   }
 
-  // Overall attendance across all subjects (1 Hour = 1 Period)
+  void _snack(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
   int get _totalAttended =>
       _subjects.fold(0, (sum, s) => sum + s.attendedHours);
   int get _totalConducted =>
@@ -860,32 +956,31 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   }
 
   void _markAttendance(int subIndex, int hours, bool isPresent) {
-    final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final now = DateTime.now();
+    final todayKey = _dateKey(now);
     if (_holidays.contains(todayKey)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Today is marked as a Holiday! Unmark holiday first.'),
-        ),
-      );
+      _snack('Today is marked as a Holiday! Unmark holiday first.');
+      return;
+    }
+    if (now.weekday == DateTime.sunday) {
+      _snack('Sunday: no classes. Attendance cannot be marked.');
       return;
     }
 
     setState(() {
       final sub = _subjects[subIndex];
       sub.totalHours += hours;
-      if (isPresent) {
-        sub.attendedHours += hours;
-      }
+      if (isPresent) sub.attendedHours += hours;
       _dailyLogs.putIfAbsent(todayKey, () => []);
       _dailyLogs[todayKey]!.add(
-        '${sub.name}: ${isPresent ? "Present" : "Absent"} (${hours}h)',
+        '${sub.name}: ${isPresent ? 'Present' : 'Absent'} (${hours}h)',
       );
     });
     _saveData();
   }
 
   void _toggleHoliday(DateTime date) {
-    final key = DateFormat('yyyy-MM-dd').format(date);
+    final key = _dateKey(date);
     setState(() {
       if (_holidays.contains(key)) {
         _holidays.remove(key);
@@ -909,12 +1004,6 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     return base64Encode(utf8.encode(jsonEncode(payload)));
   }
 
-  Color _statusColor(double pct) {
-    if (pct >= 75.0) return const Color(0xFF22C55E); // Safe Green
-    if (pct >= 65.0) return const Color(0xFFF59E0B); // Condonation Amber
-    return const Color(0xFFEF4444); // Shortage Red
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -936,11 +1025,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
           IconButton(
             tooltip: 'Edit College / Profile',
             icon: const Icon(Icons.settings_outlined),
-            onPressed: () async {
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.setBool('is_onboarded', false);
-              widget.onResetProfile();
-            },
+            onPressed: widget.onEditProfile,
           ),
         ],
       ),
@@ -948,7 +1033,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
         index: _tabIndex,
         children: [
           _buildDashboardTab(),
-          _buildMonthlyCalendarTab(),
+          _buildCalendarTab(),
           _buildShareTab(),
         ],
       ),
@@ -977,10 +1062,10 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   }
 
   // --------------------------------------------------------------------------
-  // TAB 1: 75% DASHBOARD & BUNK CALCULATOR
+  // TAB 1: 75% DASHBOARD
   // --------------------------------------------------------------------------
   Widget _buildDashboardTab() {
-    final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final todayKey = _dateKey(DateTime.now());
     final isTodayHoliday = _holidays.contains(todayKey);
     final pct = _overallPercentage;
     final color = _statusColor(pct);
@@ -988,7 +1073,6 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // Overall 75% Gauge Card
         Card(
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -1062,7 +1146,6 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                   ],
                 ),
                 const Divider(height: 24),
-                // One-Tap Holiday Button
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
@@ -1142,7 +1225,6 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                     style: const TextStyle(fontSize: 12, color: Colors.white70),
                   ),
                   const SizedBox(height: 12),
-                  // Quick Action Buttons (1h Theory, 3h Lab, Absent)
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -1181,9 +1263,9 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   }
 
   // --------------------------------------------------------------------------
-  // TAB 2: MONTHLY ACADEMIC CALENDAR
+  // TAB 2: MONTHLY CALENDAR
   // --------------------------------------------------------------------------
-  Widget _buildMonthlyCalendarTab() {
+  Widget _buildCalendarTab() {
     final now = DateTime.now();
     final daysInMonth = DateUtils.getDaysInMonth(now.year, now.month);
     final monthName = DateFormat('MMMM yyyy').format(now);
@@ -1197,7 +1279,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
         ),
         const SizedBox(height: 4),
         const Text(
-          'Tap any date to toggle Holiday / Festival / Exam day.',
+          'Tap any date to toggle Holiday / Festival / Exam day. Sundays are off by default.',
           style: TextStyle(fontSize: 13, color: Colors.white70),
         ),
         const SizedBox(height: 16),
@@ -1213,13 +1295,13 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
           itemBuilder: (ctx, idx) {
             final dayNum = idx + 1;
             final date = DateTime(now.year, now.month, dayNum);
-            final key = DateFormat('yyyy-MM-dd').format(date);
+            final key = _dateKey(date);
             final isSunday = date.weekday == DateTime.sunday;
             final isHoliday = _holidays.contains(key) || isSunday;
             final hasLogs = (_dailyLogs[key] ?? []).isNotEmpty;
 
             return InkWell(
-              onTap: () => _toggleHoliday(date),
+              onTap: isSunday ? null : () => _toggleHoliday(date),
               borderRadius: BorderRadius.circular(10),
               child: Container(
                 decoration: BoxDecoration(
@@ -1249,7 +1331,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                     ),
                     Text(
                       isHoliday
-                          ? 'Holiday'
+                          ? (isSunday ? 'Sunday' : 'Holiday')
                           : hasLogs
                               ? '${_dailyLogs[key]!.length} logs'
                               : '',
@@ -1266,7 +1348,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   }
 
   // --------------------------------------------------------------------------
-  // TAB 3: CR / STUDENT QR & WHATSAPP CODE SHARE
+  // TAB 3: SHARE CODE
   // --------------------------------------------------------------------------
   Widget _buildShareTab() {
     final shareCode = _generateShareCode();
@@ -1280,13 +1362,13 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
             child: Column(
               children: [
                 const Text(
-                  'Share Subjects & Monthly Holidays with Classmates',
+                  'Share Subjects & Holidays with Classmates',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Any student or CR can share this QR or WhatsApp code so classmates don\'t have to type subjects and holidays manually.',
+                  "Any student or CR can share this QR or WhatsApp code so classmates don't have to type subjects and holidays manually.",
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 13, color: Colors.white70),
                 ),
@@ -1309,13 +1391,8 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                   child: FilledButton.icon(
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: shareCode));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Class Setup Code copied! Paste it in your WhatsApp group.',
-                          ),
-                        ),
-                      );
+                      _snack(
+                          'Class Setup Code copied! Paste it in your WhatsApp group.');
                     },
                     icon: const Icon(Icons.copy),
                     label: const Text('Copy Code for WhatsApp Group'),
