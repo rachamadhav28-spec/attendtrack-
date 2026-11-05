@@ -1953,7 +1953,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
             ),
             child: const Row(
               children: [
-                Icon(Icons.help_Center_rounded,
+                Icon(Icons.help_center_rounded,
                     color: Color(0xFF3730A3), size: 36),
                 SizedBox(width: 12),
                 Expanded(
