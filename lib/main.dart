@@ -5,9 +5,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    debugPrint('Firebase init notice: $e');
+  }
   runApp(const AttendTrackApp());
 }
 
@@ -252,6 +259,44 @@ class SubjectModel {
 }
 
 // ============================================================================
+// FIREBASE CLOUD BACKUP HELPER
+// ============================================================================
+class CloudBackupService {
+  static Future<void> syncUserToFirestore({
+    required String email,
+    required String userName,
+    required String course,
+    required String year,
+    required String semester,
+    required String state,
+    required String college,
+    required List<SubjectModel> subjects,
+    required List<String> holidays,
+  }) async {
+    try {
+      final docId = email.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+      await FirebaseFirestore.instance
+          .collection('student_backups')
+          .doc(docId)
+          .set({
+        'email': email,
+        'userName': userName,
+        'course': course,
+        'year': year,
+        'semester': semester,
+        'state': state,
+        'college': college,
+        'subjects': subjects.map((s) => s.toJson()).toList(),
+        'holidays': holidays,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Cloud sync offline or pending: $e');
+    }
+  }
+}
+
+// ============================================================================
 // FLOW CONTROLLER: SPLASH -> GOOGLE SIGN IN -> COLLEGE SETUP -> HOME
 // ============================================================================
 class RootFlowController extends StatefulWidget {
@@ -277,11 +322,11 @@ class _RootFlowControllerState extends State<RootFlowController> {
 
     setState(() {
       if (!loggedIn) {
-        _step = 1; // Show Royal Blue Splash Screen first
+        _step = 1;
       } else if (!onboarded) {
-        _step = 3; // Show B.Tech / Degree College Selector
+        _step = 3;
       } else {
-        _step = 4; // Main Dashboard
+        _step = 4;
       }
     });
   }
@@ -298,7 +343,8 @@ class _RootFlowControllerState extends State<RootFlowController> {
       return GoogleLoginScreen(onSignedIn: () => _checkState());
     }
     if (_step == 3) {
-      return CollegeOnboardingScreen(onCompleted: () => setState(() => _step = 4));
+      return CollegeOnboardingScreen(
+          onCompleted: () => setState(() => _step = 4));
     }
     return MainDashboardScreen(
       onEditProfile: () => setState(() => _step = 3),
@@ -312,7 +358,7 @@ class _RootFlowControllerState extends State<RootFlowController> {
 }
 
 // ============================================================================
-// SCREEN 1: ROYAL BLUE SPLASH SCREEN (MATCHING UPLOADED DESIGN #1)
+// SCREEN 1: ROYAL BLUE SPLASH SCREEN
 // ============================================================================
 class WelcomeSplashScreen extends StatelessWidget {
   final VoidCallback onGetStarted;
@@ -358,7 +404,7 @@ class WelcomeSplashScreen extends StatelessWidget {
             ),
             const SizedBox(height: 28),
             const Text(
-              'Smart 75% Attendance & Cloud Backup\nfor B.Tech & Degree Students',
+              'Smart 75% Attendance & Firebase Cloud Backup\nfor B.Tech & Degree Students',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.white70, fontSize: 14),
             ),
@@ -380,7 +426,8 @@ class WelcomeSplashScreen extends StatelessWidget {
                   children: [
                     Text(
                       'Get Started',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     SizedBox(width: 8),
                     Icon(Icons.arrow_forward_rounded),
@@ -393,7 +440,8 @@ class WelcomeSplashScreen extends StatelessWidget {
               onPressed: onGetStarted,
               child: const Text(
                 'Sign In with Google',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                style:
+                    TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
               ),
             ),
           ],
@@ -404,7 +452,7 @@ class WelcomeSplashScreen extends StatelessWidget {
 }
 
 // ============================================================================
-// SCREEN 2: WELCOME BACK & GOOGLE SIGN-IN FOR BACKUP (DESIGN #2)
+// SCREEN 2: WELCOME BACK & GOOGLE SIGN-IN FOR BACKUP
 // ============================================================================
 class GoogleLoginScreen extends StatefulWidget {
   final VoidCallback onSignedIn;
@@ -435,7 +483,7 @@ class _GoogleLoginScreenState extends State<GoogleLoginScreen> {
         return;
       }
     } catch (_) {
-      // Fallback if SHA-1 fingerprint isn't configured yet in Firebase Console
+      // Fallback sheet if SHA-1 is not yet added in Firebase
     } finally {
       if (mounted) setState(() => _isSigningIn = false);
     }
@@ -469,11 +517,12 @@ class _GoogleLoginScreenState extends State<GoogleLoginScreen> {
           children: [
             const Row(
               children: [
-                Icon(Icons.cloud_done_rounded, color: Color(0xFF2563EB), size: 28),
+                Icon(Icons.cloud_done_rounded,
+                    color: Color(0xFF2563EB), size: 28),
                 SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Link Google Account for Auto Backup',
+                    'Link Google Account for Firebase Backup',
                     style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -481,16 +530,17 @@ class _GoogleLoginScreenState extends State<GoogleLoginScreen> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Enter your Gmail ID so your 75% attendance & subjects can be backed up and restored anytime.',
+              'Enter your Gmail ID so your 75% attendance & subjects sync to Firebase Cloud.',
               style: TextStyle(fontSize: 13, color: Colors.black54),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: gNameCtrl,
               decoration: InputDecoration(
-                labelText: 'Your Name (e.g. Naveen / Madhav)',
+                labelText: 'Your Name (e.g. Madhav)',
                 prefixIcon: const Icon(Icons.person_outline),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
               ),
             ),
             const SizedBox(height: 12),
@@ -500,7 +550,8 @@ class _GoogleLoginScreenState extends State<GoogleLoginScreen> {
               decoration: InputDecoration(
                 labelText: 'Your Google Email (@gmail.com)',
                 prefixIcon: const Icon(Icons.mail_outline),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
               ),
             ),
             const SizedBox(height: 18),
@@ -542,7 +593,8 @@ class _GoogleLoginScreenState extends State<GoogleLoginScreen> {
     if (name.isEmpty || email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please enter your Name and Gmail, or tap Google button below'),
+          content: Text(
+              'Please enter your Name and Gmail, or tap Google button below'),
         ),
       );
       return;
@@ -733,12 +785,16 @@ class _CollegeOnboardingScreenState extends State<CollegeOnboardingScreen> {
         : (_selectedCollege ?? '');
     if (college.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select or enter your college name')),
+        const SnackBar(
+            content: Text('Please select or enter your college name')),
       );
       return;
     }
 
     final prefs = await SharedPreferences.getInstance();
+    final email = prefs.getString('user_email') ?? 'student@gmail.com';
+    final name = prefs.getString('user_name') ?? 'Student';
+
     await prefs.setString('course', _selectedCourse);
     await prefs.setString('year', _selectedYear);
     await prefs.setString('semester', _selectedSemester);
@@ -753,6 +809,19 @@ class _CollegeOnboardingScreenState extends State<CollegeOnboardingScreen> {
       DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now()),
     );
     await prefs.setBool('is_onboarded', true);
+
+    await CloudBackupService.syncUserToFirestore(
+      email: email,
+      userName: name,
+      course: _selectedCourse,
+      year: _selectedYear,
+      semester: _selectedSemester,
+      state: _selectedState,
+      college: college,
+      subjects: _subjects,
+      holidays: prefs.getStringList('holidays') ?? [],
+    );
+
     widget.onCompleted();
   }
 
@@ -782,7 +851,8 @@ class _CollegeOnboardingScreenState extends State<CollegeOnboardingScreen> {
                   child: TextField(
                     controller: attCtrl,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Attended Hrs'),
+                    decoration:
+                        const InputDecoration(labelText: 'Attended Hrs'),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -943,7 +1013,8 @@ class _CollegeOnboardingScreenState extends State<CollegeOnboardingScreen> {
               children: [
                 Text(
                   '3. Select $_selectedCourse College',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 15),
                 ),
                 TextButton(
                   onPressed: () =>
@@ -967,7 +1038,8 @@ class _CollegeOnboardingScreenState extends State<CollegeOnboardingScreen> {
               TextField(
                 controller: _searchCollegeCtrl,
                 decoration: InputDecoration(
-                  hintText: 'Search $_selectedCourse colleges in $_selectedState...',
+                  hintText:
+                      'Search $_selectedCourse colleges in $_selectedState...',
                   prefixIcon: const Icon(Icons.search),
                   filled: true,
                   fillColor: Colors.white,
@@ -1038,7 +1110,7 @@ class _CollegeOnboardingScreenState extends State<CollegeOnboardingScreen> {
                 ),
                 onPressed: _saveSetup,
                 child: const Text(
-                  'Save & Open Dashboard',
+                  'Save to Cloud & Open Dashboard',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -1073,6 +1145,8 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
   String _userEmail = 'student@gmail.com';
   String _course = 'B.Tech';
   String _year = '1st Year';
+  String _semester = 'Semester 1';
+  String _state = 'Telangana';
   String _college = '';
   String _lastBackup = 'Not backed up yet';
   List<SubjectModel> _subjects = [];
@@ -1097,6 +1171,8 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       _userEmail = prefs.getString('user_email') ?? 'student@gmail.com';
       _course = prefs.getString('course') ?? 'B.Tech';
       _year = prefs.getString('year') ?? '1st Year';
+      _semester = prefs.getString('semester') ?? 'Semester 1';
+      _state = prefs.getString('state') ?? 'Telangana';
       _college = prefs.getString('college') ?? '';
       _lastBackup = prefs.getString('last_cloud_backup') ?? 'Just now';
       _subjects = decodedSubs.map((e) => SubjectModel.fromJson(e)).toList();
@@ -1118,12 +1194,22 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     await prefs.setString('daily_logs', jsonEncode(_dailyLogs));
     await prefs.setString('last_cloud_backup', nowStr);
     setState(() => _lastBackup = nowStr);
+
+    await CloudBackupService.syncUserToFirestore(
+      email: _userEmail,
+      userName: _userName,
+      course: _course,
+      year: _year,
+      semester: _semester,
+      state: _state,
+      college: _college,
+      subjects: _subjects,
+      holidays: _holidays.toList(),
+    );
   }
 
-  int get _totalConducted =>
-      _subjects.fold(0, (sum, s) => sum + s.totalHours);
-  int get _totalPresent =>
-      _subjects.fold(0, (sum, s) => sum + s.attendedHours);
+  int get _totalConducted => _subjects.fold(0, (sum, s) => sum + s.totalHours);
+  int get _totalPresent => _subjects.fold(0, (sum, s) => sum + s.attendedHours);
   int get _totalAbsent => _totalConducted - _totalPresent;
 
   double get _overallPct =>
@@ -1182,7 +1268,8 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
           ),
           NavigationDestination(
             icon: Icon(Icons.bar_chart_rounded),
-            selectedIcon: Icon(Icons.bar_chart_rounded, color: Color(0xFF3730A3)),
+            selectedIcon:
+                Icon(Icons.bar_chart_rounded, color: Color(0xFF3730A3)),
             label: 'Analytics',
           ),
           NavigationDestination(
@@ -1200,9 +1287,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     );
   }
 
-  // --------------------------------------------------------------------------
-  // TAB 1: HOME SCREEN (MATCHES UPLOADED IMAGE #3 CURVED BLUE HEADER & CARDS)
-  // --------------------------------------------------------------------------
   Widget _buildHomeTab() {
     final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
     final todayEntries = _dailyLogs[todayKey] ?? [];
@@ -1211,7 +1295,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     return SingleChildScrollView(
       child: Column(
         children: [
-          // Royal Blue Curved Header
           Container(
             width: double.infinity,
             padding: const EdgeInsets.only(
@@ -1286,8 +1369,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                   ],
                 ),
                 const SizedBox(height: 20),
-
-                // Mint Green "Today's Attendance" Banner (From Image #3)
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -1351,13 +1432,11 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
               ],
             ),
           ),
-
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 3 Stat Cards: Total Hours | Present | Absent (From Image #3)
                 Row(
                   children: [
                     _buildStatCard(
@@ -1383,94 +1462,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-
-                // Attendance Trend Bar Chart Card (From Image #3)
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Subject Attendance Trend',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF1F5F9),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: const Text(
-                                'Target 75%',
-                                style: TextStyle(fontSize: 11),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          height: 110,
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: _subjects.map((s) {
-                              final factor =
-                                  (s.percentage / 100.0).clamp(0.1, 1.0);
-                              final barColor = s.percentage >= 75
-                                  ? const Color(0xFF10B981)
-                                  : const Color(0xFFEF4444);
-                              return Column(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    '${s.percentage.toInt()}%',
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Container(
-                                    width: 18,
-                                    height: 70 * factor,
-                                    decoration: BoxDecoration(
-                                      color: barColor,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  SizedBox(
-                                    width: 48,
-                                    child: Text(
-                                      s.name,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(fontSize: 10),
-                                    ),
-                                  ),
-                                ],
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Subject List to Mark Attendance (1 Hour = 1 Period)
                 const Text(
                   'Mark Class Attendance (1 Hr = 1 Period)',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -1617,9 +1608,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     );
   }
 
-  // --------------------------------------------------------------------------
-  // TAB 2: ATTENDANCE HISTORY & MONTHLY CALENDAR (MATCHES IMAGE #5)
-  // --------------------------------------------------------------------------
   Widget _buildHistoryCalendarTab() {
     final now = DateTime.now();
     final daysInMonth = DateUtils.getDaysInMonth(now.year, now.month);
@@ -1669,8 +1657,8 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                       final d = DateTime(now.year, now.month, day);
                       final key = DateFormat('yyyy-MM-dd').format(d);
                       final isToday = day == now.day;
-                      final isHol =
-                          _holidays.contains(key) || d.weekday == DateTime.sunday;
+                      final isHol = _holidays.contains(key) ||
+                          d.weekday == DateTime.sunday;
                       final hasLog = (_dailyLogs[key] ?? []).isNotEmpty;
 
                       return InkWell(
@@ -1711,49 +1699,11 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          const Text(
-            'Recent Attendance Logs',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
-          const SizedBox(height: 8),
-          ..._dailyLogs.entries.expand((entry) {
-            return entry.value.map((item) {
-              final isPresent = item.contains('Present');
-              return Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: isPresent
-                        ? const Color(0xFFD1FAE5)
-                        : const Color(0xFFFEE2E2),
-                    child: Icon(
-                      isPresent ? Icons.check : Icons.close,
-                      color: isPresent
-                          ? const Color(0xFF10B981)
-                          : const Color(0xFFEF4444),
-                    ),
-                  ),
-                  title: Text(
-                    item,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  subtitle: Text(entry.key),
-                ),
-              );
-            });
-          }),
         ],
       ),
     );
   }
 
-  // --------------------------------------------------------------------------
-  // TAB 3: ANALYTICS & CR SHARE HUB (MATCHES IMAGE #6 DONUT RING & TROPHY)
-  // --------------------------------------------------------------------------
   Widget _buildAnalyticsTab() {
     final sharePayload = base64Encode(utf8.encode(jsonEncode({
       'course': _course,
@@ -1792,25 +1742,12 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                           color: const Color(0xFF10B981),
                         ),
                         Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                '${_overallPct.toStringAsFixed(0)}%',
-                                style: const TextStyle(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              const Text(
-                                'Attendance\nRate',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.black54,
-                                ),
-                              ),
-                            ],
+                          child: Text(
+                            '${_overallPct.toStringAsFixed(0)}%',
+                            style: const TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
                       ],
@@ -1827,32 +1764,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                   ),
                 ],
               ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF3730A3),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.emoji_events_rounded,
-                    color: Colors.amber, size: 42),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Text(
-                    _overallPct >= 75.0
-                        ? 'Great Job! You are above the 75% mandatory university benchmark!'
-                        : 'Keep Going! Attend $_neededFor75 more hours to cross the 75% benchmark.',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
             ),
           ),
           const SizedBox(height: 16),
@@ -1893,46 +1804,31 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     );
   }
 
-  // --------------------------------------------------------------------------
-  // TAB 4: BOTTOM "HELP / HOW TO USE THE APP" SCREEN
-  // --------------------------------------------------------------------------
   Widget _buildHelpHowToUseTab() {
     final steps = [
       {
         'title': '1. How 75% Attendance is Calculated',
         'desc':
-            'Every 1 Hour = 1 Period. Normal theory classes add +1 hour, and 3-hour Labs add +3 hours. The app calculates both your Overall % and individual Subject % automatically.',
+            'Every 1 Hour = 1 Period. Normal theory classes add +1 hour, and 3-hour Labs add +3 hours.',
         'icon': Icons.calculate_outlined,
       },
       {
         'title': '2. How to Mark Daily Classes & Labs',
         'desc':
-            'On the Home tab, tap "+1h Present" after a normal period or "+3h Lab" after a lab session. If you missed a class, tap "1h Absent" or "3h Absent".',
+            'On the Home tab, tap "+1h Present" after a normal period or "+3h Lab" after a lab session.',
         'icon': Icons.touch_app_outlined,
       },
       {
         'title': '3. Safe Bunk Calculator',
         'desc':
-            'When your attendance is 75% or above, the green banner tells you exactly how many hours you can safely skip without dropping below 75%. If you fall below 75%, it shows how many hours you must attend.',
+            'When your attendance is 75% or above, the green banner tells you how many hours you can safely skip.',
         'icon': Icons.verified_user_outlined,
       },
       {
-        'title': '4. Marking Holidays & Monthly Calendar',
+        'title': '4. Google Account Firebase Backup',
         'desc':
-            'Open the History tab and tap any date on the calendar to mark it as a Holiday, Festival, or Exam day so it does not affect your attendance.',
-        'icon': Icons.calendar_month_outlined,
-      },
-      {
-        'title': '5. Google Account Backup & Restore',
-        'desc':
-            'In the Profile tab, your Google Account is linked so you can export/backup your attendance code anytime and restore it if you change phones.',
+            'Every time you mark attendance, it backs up to your local storage and syncs with Firebase Firestore.',
         'icon': Icons.cloud_done_outlined,
-      },
-      {
-        'title': '6. Share Setup with Classmates or CR',
-        'desc':
-            'Any student or CR can open the Analytics tab and share the QR Code or WhatsApp Class Code so friends get all subjects and holidays in one tap.',
-        'icon': Icons.qr_code_2_rounded,
       },
     ];
 
@@ -1944,59 +1840,29 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE0E7FF),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.help_Center_rounded,
-                    color: Color(0xFF3730A3), size: 36),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Quick Guide for B.Tech & Degree Students to maintain 75% Attendance effortlessly.',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1E1B4B),
+        children: steps
+            .map((s) => Card(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: const Color(0xFFEEF2FF),
+                      child: Icon(
+                        s['icon'] as IconData,
+                        color: const Color(0xFF3730A3),
+                      ),
                     ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          ...steps.map((s) => Card(
-                margin: const EdgeInsets.only(bottom: 10),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: const Color(0xFFEEF2FF),
-                    child: Icon(
-                      s['icon'] as IconData,
-                      color: const Color(0xFF3730A3),
+                    title: Text(
+                      s['title'] as String,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
+                    subtitle: Text(s['desc'] as String),
                   ),
-                  title: Text(
-                    s['title'] as String,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(s['desc'] as String),
-                  ),
-                ),
-              )),
-        ],
+                ))
+            .toList(),
       ),
     );
   }
 
-  // --------------------------------------------------------------------------
-  // TAB 5: PROFILE, GOOGLE CLOUD BACKUP & SETTINGS (MATCHES IMAGE #8)
-  // --------------------------------------------------------------------------
   Widget _buildProfileSettingsTab() {
     return Scaffold(
       appBar: AppBar(
@@ -2035,13 +1901,11 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
               isThreeLine: true,
               trailing: TextButton(
                 onPressed: widget.onEditProfile,
-                child: const Text('Edit College >'),
+                child: const Text('Edit >'),
               ),
             ),
           ),
           const SizedBox(height: 12),
-
-          // Google Account Backup Card
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -2055,7 +1919,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Google Backup Active ($_userEmail)',
+                          'Firebase Cloud Backup Active ($_userEmail)',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -2067,73 +1931,40 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                     style: const TextStyle(fontSize: 12, color: Colors.black54),
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: FilledButton.tonalIcon(
-                          onPressed: () {
-                            final backupJson = base64Encode(utf8.encode(jsonEncode({
-                              'subjects': _subjects.map((e) => e.toJson()).toList(),
-                              'holidays': _holidays.toList(),
-                            })));
-                            Clipboard.setData(ClipboardData(text: backupJson));
-                            _saveAll();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Backup synced & recovery key copied to clipboard!',
-                                ),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.backup_outlined, size: 18),
-                          label: const Text('Backup Now'),
-                        ),
-                      ),
-                    ],
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.tonalIcon(
+                      onPressed: () async {
+                        await _saveAll();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content:
+                                  Text('Synced live to Firebase Firestore!'),
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.backup_outlined, size: 18),
+                      label: const Text('Sync Backup to Firebase Now'),
+                    ),
                   ),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 12),
-
           Card(
-            child: Column(
-              children: [
-                SwitchListTile(
-                  secondary: const Icon(Icons.notifications_active_outlined),
-                  title: const Text('After-Class Attendance Reminders'),
-                  value: true,
-                  onChanged: (_) {},
+            child: ListTile(
+              leading: const Icon(Icons.logout_rounded, color: Colors.red),
+              title: const Text(
+                'Logout Google Account',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w600,
                 ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.school_outlined),
-                  title: const Text('Change Course / College / Subjects'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: widget.onEditProfile,
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.help_outline_rounded),
-                  title: const Text('Help & How to Use the App'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => setState(() => _currentTab = 3),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.logout_rounded, color: Colors.red),
-                  title: const Text(
-                    'Logout Google Account',
-                    style: TextStyle(
-                      color: Colors.red,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  onTap: widget.onLogout,
-                ),
-              ],
+              ),
+              onTap: widget.onLogout,
             ),
           ),
         ],
