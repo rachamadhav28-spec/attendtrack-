@@ -7,6 +7,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'course_subjects.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -273,6 +274,7 @@ class CloudBackupService {
     required List<SubjectModel> subjects,
     required List<String> holidays,
   }) async {
+    if (email.trim().isEmpty) return;
     try {
       final docId = email.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
       await FirebaseFirestore.instance
@@ -404,7 +406,7 @@ class WelcomeSplashScreen extends StatelessWidget {
             ),
             const SizedBox(height: 28),
             const Text(
-              'Smart 75% Attendance & Firebase Cloud Backup\nfor B.Tech & Degree Students',
+              'Smart 75% Attendance Tracker\nfor B.Tech & Degree Students',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.white70, fontSize: 14),
             ),
@@ -463,9 +465,15 @@ class GoogleLoginScreen extends StatefulWidget {
 }
 
 class _GoogleLoginScreenState extends State<GoogleLoginScreen> {
-  final TextEditingController _nameCtrl = TextEditingController();
-  final TextEditingController _emailCtrl = TextEditingController();
   bool _isSigningIn = false;
+
+  Future<void> _finishLogin(String name, String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_name', name);
+    await prefs.setString('user_email', email);
+    await prefs.setBool('is_logged_in', true);
+    widget.onSignedIn();
+  }
 
   Future<void> _handleGoogleSignIn() async {
     setState(() => _isSigningIn = true);
@@ -474,137 +482,59 @@ class _GoogleLoginScreenState extends State<GoogleLoginScreen> {
       final GoogleSignInAccount? account = await googleSignIn.signIn();
 
       if (account != null) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('user_name', account.displayName ?? 'Student');
-        await prefs.setString('user_email', account.email);
-        await prefs.setBool('is_google_backup_enabled', true);
-        await prefs.setBool('is_logged_in', true);
-        widget.onSignedIn();
+        final fullName = (account.displayName ?? '').trim();
+        await _finishLogin(
+          fullName.isEmpty ? 'Student' : fullName,
+          account.email,
+        );
         return;
       }
     } catch (_) {
-      // Fallback sheet if SHA-1 is not yet added in Firebase
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Google sign-in is not available right now. You can continue with your name below.'),
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isSigningIn = false);
     }
-
-    if (!mounted) return;
-    _showGoogleAccountPickerSheet();
   }
 
-  void _showGoogleAccountPickerSheet() {
-    final gNameCtrl = TextEditingController(text: _nameCtrl.text);
-    final gEmailCtrl = TextEditingController(
-      text: _emailCtrl.text.isNotEmpty ? _emailCtrl.text : '',
-    );
-
-    showModalBottomSheet(
+  void _showNameOnlyDialog() {
+    final nameCtrl = TextEditingController();
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 24,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Continue with your name'),
+        content: TextField(
+          controller: nameCtrl,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(
+            labelText: 'Your Name',
+            hintText: 'e.g., Ram',
+            prefixIcon: Icon(Icons.person_outline),
+          ),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                Icon(Icons.cloud_done_rounded,
-                    color: Color(0xFF2563EB), size: 28),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Link Google Account for Firebase Backup',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Enter your Gmail ID so your 75% attendance & subjects sync to Firebase Cloud.',
-              style: TextStyle(fontSize: 13, color: Colors.black54),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: gNameCtrl,
-              decoration: InputDecoration(
-                labelText: 'Your Name (e.g. Madhav)',
-                prefixIcon: const Icon(Icons.person_outline),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: gEmailCtrl,
-              keyboardType: TextInputType.emailAddress,
-              decoration: InputDecoration(
-                labelText: 'Your Google Email (@gmail.com)',
-                prefixIcon: const Icon(Icons.mail_outline),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-            ),
-            const SizedBox(height: 18),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF3730A3),
-                ),
-                onPressed: () async {
-                  final name = gNameCtrl.text.trim().isEmpty
-                      ? 'Student'
-                      : gNameCtrl.text.trim();
-                  final email = gEmailCtrl.text.trim().isEmpty
-                      ? 'student@gmail.com'
-                      : gEmailCtrl.text.trim();
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setString('user_name', name);
-                  await prefs.setString('user_email', email);
-                  await prefs.setBool('is_google_backup_enabled', true);
-                  await prefs.setBool('is_logged_in', true);
-                  if (ctx.mounted) Navigator.pop(ctx);
-                  widget.onSignedIn();
-                },
-                icon: const Icon(Icons.cloud_upload_outlined),
-                label: const Text('Connect Google Account & Continue'),
-              ),
-            ),
-          ],
-        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final name = nameCtrl.text.trim();
+              if (name.isEmpty) return;
+              Navigator.pop(ctx);
+              await _finishLogin(name, '');
+            },
+            child: const Text('Continue'),
+          ),
+        ],
       ),
     );
-  }
-
-  Future<void> _handleDirectSignIn() async {
-    final name = _nameCtrl.text.trim();
-    final email = _emailCtrl.text.trim();
-    if (name.isEmpty || email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              'Please enter your Name and Gmail, or tap Google button below'),
-        ),
-      );
-      return;
-    }
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_name', name);
-    await prefs.setString('user_email', email);
-    await prefs.setBool('is_google_backup_enabled', true);
-    await prefs.setBool('is_logged_in', true);
-    widget.onSignedIn();
   }
 
   @override
@@ -621,7 +551,7 @@ class _GoogleLoginScreenState extends State<GoogleLoginScreen> {
               const Center(child: AttendanceAppLogo(size: 92)),
               const SizedBox(height: 28),
               const Text(
-                'Welcome Back 👋',
+                'Welcome 👋',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w800,
@@ -630,71 +560,10 @@ class _GoogleLoginScreenState extends State<GoogleLoginScreen> {
               ),
               const SizedBox(height: 4),
               const Text(
-                'Sign in with Google to backup & sync your attendance',
+                'Sign in with your Google account to get started',
                 style: TextStyle(fontSize: 14, color: Colors.black54),
               ),
-              const SizedBox(height: 24),
-              TextField(
-                controller: _nameCtrl,
-                decoration: InputDecoration(
-                  hintText: 'Your Full Name (e.g., Madhav)',
-                  prefixIcon: const Icon(Icons.person_outline),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: _emailCtrl,
-                keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(
-                  hintText: 'Google Email (yourname@gmail.com)',
-                  prefixIcon: const Icon(Icons.email_outlined),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 22),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF3730A3),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  onPressed: _handleDirectSignIn,
-                  child: const Text(
-                    'Sign In & Enable Cloud Backup',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              const Row(
-                children: [
-                  Expanded(child: Divider()),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    child: Text(
-                      'or login with Google for Backup',
-                      style: TextStyle(fontSize: 12, color: Colors.black54),
-                    ),
-                  ),
-                  Expanded(child: Divider()),
-                ],
-              ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
                 height: 52,
@@ -713,15 +582,20 @@ class _GoogleLoginScreenState extends State<GoogleLoginScreen> {
                     color: Color(0xFFEA4335),
                   ),
                   label: Text(
-                    _isSigningIn
-                        ? 'Connecting Google Account...'
-                        : 'Continue with Google Account',
+                    _isSigningIn ? 'Signing in...' : 'Continue with Google',
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF1E293B),
                     ),
                   ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Center(
+                child: TextButton(
+                  onPressed: _showNameOnlyDialog,
+                  child: const Text('Continue with just my name'),
                 ),
               ),
             ],
@@ -754,18 +628,26 @@ class _CollegeOnboardingScreenState extends State<CollegeOnboardingScreen> {
   final TextEditingController _customCollegeCtrl = TextEditingController();
   final TextEditingController _searchCollegeCtrl = TextEditingController();
 
-  final List<SubjectModel> _subjects = [
-    SubjectModel(name: 'Mathematics'),
-    SubjectModel(name: 'Programming in C'),
-    SubjectModel(name: 'Programming Lab'),
-    SubjectModel(name: 'English'),
-  ];
+  late String _selectedBranch;
+  List<SubjectModel> _subjects = [];
 
   @override
   void initState() {
     super.initState();
+    _selectedBranch = CourseSubjects.branchesFor(_selectedCourse).first;
     _selectedCollege =
         IndiaCollegeDatabase.getColleges(_selectedCourse, _selectedState).first;
+    _loadSuggestedSubjects();
+  }
+
+  /// Fills the subject list for the chosen course, branch, year and semester.
+  void _loadSuggestedSubjects() {
+    _subjects = CourseSubjects.subjectsFor(
+      _selectedCourse,
+      _selectedBranch,
+      _selectedYear,
+      _selectedSemester,
+    ).map((n) => SubjectModel(name: n)).toList();
   }
 
   List<String> get _years => _selectedCourse == 'B.Tech'
@@ -777,6 +659,13 @@ class _CollegeOnboardingScreenState extends State<CollegeOnboardingScreen> {
         IndiaCollegeDatabase.getColleges(_selectedCourse, _selectedState);
     if (!_years.contains(_selectedYear)) _selectedYear = '1st Year';
     _selectedCollege = list.isNotEmpty ? list.first : null;
+  }
+
+  void _onCourseChanged(String course) {
+    _selectedCourse = course;
+    _selectedBranch = CourseSubjects.branchesFor(course).first;
+    _refreshColleges();
+    _loadSuggestedSubjects();
   }
 
   Future<void> _saveSetup() async {
@@ -796,6 +685,7 @@ class _CollegeOnboardingScreenState extends State<CollegeOnboardingScreen> {
     final name = prefs.getString('user_name') ?? 'Student';
 
     await prefs.setString('course', _selectedCourse);
+    await prefs.setString('branch', _selectedBranch);
     await prefs.setString('year', _selectedYear);
     await prefs.setString('semester', _selectedSemester);
     await prefs.setString('state', _selectedState);
@@ -936,10 +826,7 @@ class _CollegeOnboardingScreenState extends State<CollegeOnboardingScreen> {
                       ),
                       selected: isSel,
                       onSelected: (_) {
-                        setState(() {
-                          _selectedCourse = c;
-                          _refreshColleges();
-                        });
+                        setState(() => _onCourseChanged(c));
                       },
                     ),
                   ),
@@ -947,8 +834,35 @@ class _CollegeOnboardingScreenState extends State<CollegeOnboardingScreen> {
               }).toList(),
             ),
             const SizedBox(height: 16),
+            Text(
+              _selectedCourse == 'B.Tech'
+                  ? '2. Select Your Branch'
+                  : '2. Select Your Stream',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: _selectedBranch,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(),
+              ),
+              items: CourseSubjects.branchesFor(_selectedCourse)
+                  .map((b) => DropdownMenuItem(
+                        value: b,
+                        child: Text(b, overflow: TextOverflow.ellipsis),
+                      ))
+                  .toList(),
+              onChanged: (v) => setState(() {
+                _selectedBranch = v!;
+                _loadSuggestedSubjects();
+              }),
+            ),
+            const SizedBox(height: 16),
             const Text(
-              '2. Select Year & State',
+              '3. Select Year, Semester & State',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
             ),
             const SizedBox(height: 8),
@@ -966,7 +880,10 @@ class _CollegeOnboardingScreenState extends State<CollegeOnboardingScreen> {
                     items: _years
                         .map((y) => DropdownMenuItem(value: y, child: Text(y)))
                         .toList(),
-                    onChanged: (v) => setState(() => _selectedYear = v!),
+                    onChanged: (v) => setState(() {
+                      _selectedYear = v!;
+                      _loadSuggestedSubjects();
+                    }),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -982,7 +899,10 @@ class _CollegeOnboardingScreenState extends State<CollegeOnboardingScreen> {
                     items: ['Semester 1', 'Semester 2']
                         .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                         .toList(),
-                    onChanged: (v) => setState(() => _selectedSemester = v!),
+                    onChanged: (v) => setState(() {
+                      _selectedSemester = v!;
+                      _loadSuggestedSubjects();
+                    }),
                   ),
                 ),
               ],
@@ -1012,7 +932,7 @@ class _CollegeOnboardingScreenState extends State<CollegeOnboardingScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '3. Select $_selectedCourse College',
+                  '4. Select $_selectedCourse College',
                   style: const TextStyle(
                       fontWeight: FontWeight.bold, fontSize: 15),
                 ),
@@ -1072,7 +992,7 @@ class _CollegeOnboardingScreenState extends State<CollegeOnboardingScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  '4. Your Subjects & Labs',
+                  '5. Your Subjects & Labs',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                 ),
                 FilledButton.tonalIcon(
@@ -1081,6 +1001,14 @@ class _CollegeOnboardingScreenState extends State<CollegeOnboardingScreen> {
                   label: const Text('Add Subject'),
                 ),
               ],
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'Suggested for $_selectedBranch • $_selectedYear • $_selectedSemester. '
+                'Add or delete to match your syllabus.',
+                style: const TextStyle(fontSize: 12, color: Colors.black54),
+              ),
             ),
             ..._subjects.asMap().entries.map((e) {
               return Card(
@@ -1110,7 +1038,7 @@ class _CollegeOnboardingScreenState extends State<CollegeOnboardingScreen> {
                 ),
                 onPressed: _saveSetup,
                 child: const Text(
-                  'Save to Cloud & Open Dashboard',
+                  'Save & Open Dashboard',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -1824,12 +1752,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
             'When your attendance is 75% or above, the green banner tells you how many hours you can safely skip.',
         'icon': Icons.verified_user_outlined,
       },
-      {
-        'title': '4. Google Account Firebase Backup',
-        'desc':
-            'Every time you mark attendance, it backs up to your local storage and syncs with Firebase Firestore.',
-        'icon': Icons.cloud_done_outlined,
-      },
     ];
 
     return Scaffold(
@@ -1868,7 +1790,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         title: const Text(
-          'Settings & Google Backup',
+          'Settings',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
@@ -1897,8 +1819,12 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                   fontSize: 18,
                 ),
               ),
-              subtitle: Text('$_userEmail\n$_course • $_college'),
-              isThreeLine: true,
+              subtitle: Text(
+                _userEmail.isEmpty
+                    ? '$_course • $_college'
+                    : '$_userEmail\n$_course • $_college',
+              ),
+              isThreeLine: _userEmail.isNotEmpty,
               trailing: TextButton(
                 onPressed: widget.onEditProfile,
                 child: const Text('Edit >'),
@@ -1907,58 +1833,10 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
           ),
           const SizedBox(height: 12),
           Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.cloud_done_rounded,
-                          color: Color(0xFF10B981)),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Firebase Cloud Backup Active ($_userEmail)',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Last synced: $_lastBackup',
-                    style: const TextStyle(fontSize: 12, color: Colors.black54),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.tonalIcon(
-                      onPressed: () async {
-                        await _saveAll();
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content:
-                                  Text('Synced live to Firebase Firestore!'),
-                            ),
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.backup_outlined, size: 18),
-                      label: const Text('Sync Backup to Firebase Now'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Card(
             child: ListTile(
               leading: const Icon(Icons.logout_rounded, color: Colors.red),
               title: const Text(
-                'Logout Google Account',
+                'Logout',
                 style: TextStyle(
                   color: Colors.red,
                   fontWeight: FontWeight.w600,

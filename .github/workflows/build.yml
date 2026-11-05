@@ -40,9 +40,9 @@ jobs:
       - name: Install Flutter Dependencies
         run: flutter pub get
 
-      - name: Generate Custom App Logo Icon (from root app_logo.jpg)
+      - name: Generate Custom App Logo Icon (from root app_icon.png)
         run: |
-          if [ -f "app_logo.jpg" ]; then
+          if [ -f "app_icon.png" ]; then
             dart run flutter_launcher_icons
           fi
 
