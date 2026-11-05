@@ -29,6 +29,16 @@ jobs:
         run: |
           flutter create --org com.madhav.attendtrack --project-name attendtrack .
 
+      - name: Bump Kotlin Gradle plugin (plugins require Kotlin >= 1.9)
+        run: |
+          if [ -f android/settings.gradle ]; then
+            sed -i -E 's/(org\.jetbrains\.kotlin\.android"[[:space:]]+version[[:space:]]+")[0-9.]+(")/\11.9.22\2/' android/settings.gradle
+            grep -n "kotlin.android" android/settings.gradle
+          fi
+          if [ -f android/build.gradle ]; then
+            sed -i -E "s/(ext\.kotlin_version[[:space:]]*=[[:space:]]*')[0-9.]+(')/\11.9.22\2/" android/build.gradle
+          fi
+
       - name: Install Dependencies
         run: flutter pub get
 
