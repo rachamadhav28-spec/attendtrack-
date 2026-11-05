@@ -1,4 +1,4 @@
-name: Build AttendTrack APK & Play Store AAB
+name: Build AttendTrack APK & Play Store AAB (With Root Firebase)
 
 on:
   push:
@@ -28,28 +28,37 @@ jobs:
         run: |
           flutter create --org com.madhav.attendtrack --project-name attendtrack .
 
-      - name: Install Dependencies
+      - name: Move Root google-services.json into android/app/
+        run: |
+          if [ -f "google-services.json" ]; then
+            echo "Found google-services.json in root! Copying to android/app/..."
+            cp google-services.json android/app/google-services.json
+          else
+            echo "WARNING: google-services.json not found in root!"
+          fi
+
+      - name: Install Flutter Dependencies
         run: flutter pub get
 
-      - name: Set Custom App Logo Icon (if app_logo.jpg is uploaded)
+      - name: Generate Custom App Logo Icon (from root app_logo.jpg)
         run: |
           if [ -f "app_logo.jpg" ]; then
             dart run flutter_launcher_icons
           fi
 
-      - name: Build Release APK (For Phone Testing)
+      - name: Build Release APK (For Testing on Phone)
         run: flutter build apk --release
 
       - name: Build Play Store AAB Bundle
         run: flutter build appbundle --release
 
-      - name: Upload Release APK
+      - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: AttendTrack-Release-APK
           path: build/app/outputs/flutter-apk/app-release.apk
 
-      - name: Upload Play Store AAB
+      - name: Upload Play Store AAB Artifact
         uses: actions/upload-artifact@v4
         with:
           name: AttendTrack-PlayStore-AAB
