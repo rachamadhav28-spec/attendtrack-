@@ -31,6 +31,33 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
+      - name: Show Android application ID (must match the app registered in Firebase)
+        run: grep -rn "applicationId" android/app/build.gradle* || true
+
+      - name: Read Firebase settings from google-services.json (if present)
+        run: |
+          if [ -f "google-services.json" ]; then
+            python3 - <<'PYEOF' >> "$GITHUB_ENV"
+          import json
+          d = json.load(open("google-services.json"))
+          info = d["project_info"]
+          c = d["client"][0]
+          web = next((o["client_id"] for o in c.get("oauth_client", []) if o.get("client_type") == 3), "")
+          defs = {
+              "FIREBASE_API_KEY": c["api_key"][0]["current_key"],
+              "FIREBASE_APP_ID": c["client_info"]["mobilesdk_app_id"],
+              "FIREBASE_PROJECT_ID": info["project_id"],
+              "FIREBASE_SENDER_ID": info["project_number"],
+              "FIREBASE_STORAGE_BUCKET": info.get("storage_bucket", ""),
+              "GOOGLE_WEB_CLIENT_ID": web,
+          }
+          print("DART_DEFINES=" + " ".join("--dart-define=%s=%s" % kv for kv in defs.items()))
+          PYEOF
+            echo "Firebase settings loaded from google-services.json"
+          else
+            echo "No google-services.json found: building in offline-only mode"
+          fi
+
       - name: Set Custom App Logo Icon (if app_logo.jpg is uploaded)
         run: |
           if [ -f "app_logo.jpg" ]; then
@@ -38,10 +65,10 @@ jobs:
           fi
 
       - name: Build Release APK (For Phone Testing)
-        run: flutter build apk --release
+        run: flutter build apk --release $DART_DEFINES
 
       - name: Build Play Store AAB Bundle
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release $DART_DEFINES
 
       - name: Upload Release APK
         uses: actions/upload-artifact@v4

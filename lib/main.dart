@@ -5,9 +5,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'firebase_cloud_sync.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await FirebaseCloudSyncService.init();
   runApp(const AttendTrackApp());
 }
 
@@ -422,10 +424,11 @@ class _GoogleLoginScreenState extends State<GoogleLoginScreen> {
   Future<void> _handleGoogleSignIn() async {
     setState(() => _isSigningIn = true);
     try {
-      final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email']);
+      final GoogleSignIn googleSignIn = FirebaseCloudSyncService.newGoogleSignIn();
       final GoogleSignInAccount? account = await googleSignIn.signIn();
 
       if (account != null) {
+        await FirebaseCloudSyncService.signInWithGoogleAccount(account);
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_name', account.displayName ?? 'Student');
         await prefs.setString('user_email', account.email);
@@ -1118,6 +1121,22 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     await prefs.setString('daily_logs', jsonEncode(_dailyLogs));
     await prefs.setString('last_cloud_backup', nowStr);
     setState(() => _lastBackup = nowStr);
+    _backupToCloud();
+  }
+
+  /// Fire-and-forget online backup; silently skipped when offline / not signed in.
+  Future<void> _backupToCloud() async {
+    await FirebaseCloudSyncService.backupStudentAttendance(
+      email: _userEmail,
+      userName: _userName,
+      course: _course,
+      year: _year,
+      college: _college,
+      subjects: _subjects
+          .map((s) => Map<String, dynamic>.from(s.toJson()))
+          .toList(),
+      holidays: _holidays.toList(),
+    );
   }
 
   int get _totalConducted =>
@@ -1953,7 +1972,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
             ),
             child: const Row(
               children: [
-                Icon(Icons.help_Center_rounded,
+                Icon(Icons.help_center_rounded,
                     color: Color(0xFF3730A3), size: 36),
                 SizedBox(width: 12),
                 Expanded(
