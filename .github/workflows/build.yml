@@ -26,7 +26,7 @@ jobs:
 
       - name: Generate Android Platform Files
         run: |
-          flutter create --org com.madhav.attendtrack --project-name attendtrack .
+          flutter create --org com.madhav --project-name attendtrack .
 
       - name: Move Root google-services.json into android/app/
         run: |
@@ -36,6 +36,14 @@ jobs:
           else
             echo "WARNING: google-services.json not found in root!"
           fi
+
+      - name: Use the fixed signing key (keeps the SHA-1 the same on every build)
+        run: |
+          mkdir -p "$HOME/.android"
+          cp debug.keystore "$HOME/.android/debug.keystore"
+          echo "App ID:"; grep -rn "applicationId" android/app/build.gradle* || true
+          echo "Signing fingerprints (add the SHA-1 in Firebase):"
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | grep -E "SHA1|SHA256"
 
       - name: Install Flutter Dependencies
         run: flutter pub get
