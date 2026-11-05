@@ -489,12 +489,16 @@ class _GoogleLoginScreenState extends State<GoogleLoginScreen> {
         );
         return;
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
+        final detail = (e is PlatformException ? (e.message ?? e.code) : '$e')
+            .toString();
+        final shortDetail =
+            detail.length > 90 ? '${detail.substring(0, 90)}...' : detail;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-                'Google sign-in is not available right now. You can continue with your name below.'),
+                'Google sign-in failed ($shortDetail). You can continue with your name below.'),
           ),
         );
       }
