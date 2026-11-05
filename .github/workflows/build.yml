@@ -57,6 +57,9 @@ jobs:
       - name: Build Release APK (For Testing on Phone)
         run: flutter build apk --release
 
+      - name: Print the signing certificate of the built APK
+        run: keytool -printcert -jarfile build/app/outputs/flutter-apk/app-release.apk | grep -E "Owner|SHA1|SHA256"
+
       - name: Build Play Store AAB Bundle
         run: flutter build appbundle --release
 
