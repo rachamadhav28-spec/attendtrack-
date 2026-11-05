@@ -19,32 +19,37 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Flutter
+      - name: Set up Flutter (Latest Stable)
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'
           channel: 'stable'
 
-      - name: Generate missing Android platform files if not present
+      - name: Generate Android Platform Files
         run: |
           flutter create --org com.madhav.attendtrack --project-name attendtrack .
 
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Build Debug & Release APK (For Testing on Phone)
+      - name: Set Custom App Logo Icon (if app_logo.jpg is uploaded)
+        run: |
+          if [ -f "app_logo.jpg" ]; then
+            dart run flutter_launcher_icons
+          fi
+
+      - name: Build Release APK (For Phone Testing)
         run: flutter build apk --release
 
-      - name: Build Android App Bundle AAB (For Google Play Store)
+      - name: Build Play Store AAB Bundle
         run: flutter build appbundle --release
 
-      - name: Upload Release APK Artifact
+      - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
           name: AttendTrack-Release-APK
           path: build/app/outputs/flutter-apk/app-release.apk
 
-      - name: Upload Play Store AAB Bundle
+      - name: Upload Play Store AAB
         uses: actions/upload-artifact@v4
         with:
           name: AttendTrack-PlayStore-AAB
