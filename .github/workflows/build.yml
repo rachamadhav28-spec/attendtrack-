@@ -1,4 +1,4 @@
-name: Build AttendTrack APK & Play Store AAB (With Root Firebase)
+name: Build AttendTrack APK & AAB
 
 on:
   push:
@@ -26,47 +26,32 @@ jobs:
 
       - name: Generate Android Platform Files
         run: |
-          flutter create --org com.madhav --project-name attendtrack .
+          flutter create --org com.madhav.attendtrack --project-name attendtrack .
 
-      - name: Move Root google-services.json into android/app/
+      - name: Move Root google-services.json
         run: |
           if [ -f "google-services.json" ]; then
-            echo "Found google-services.json in root! Copying to android/app/..."
             cp google-services.json android/app/google-services.json
-          else
-            echo "WARNING: google-services.json not found in root!"
           fi
+          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 23/g' android/app/build.gradle || true
+          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 23/g' android/app/build.gradle || true
 
-      - name: Use the fixed signing key (keeps the SHA-1 the same on every build)
-        run: |
-          mkdir -p "$HOME/.android"
-          cp debug.keystore "$HOME/.android/debug.keystore"
-          echo "App ID:"; grep -rn "applicationId" android/app/build.gradle* || true
-          echo "Signing fingerprints (add the SHA-1 in Firebase):"
-          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | grep -E "SHA1|SHA256"
-
-      - name: Install Flutter Dependencies
+      - name: Install Dependencies
         run: flutter pub get
 
-      - name: Generate Custom App Logo Icon (from root app_icon.png)
-        run: |
-          if [ -f "app_icon.png" ]; then
-            dart run flutter_launcher_icons
-          fi
-
-      - name: Build Release APK (For Testing on Phone)
+      - name: Build Release APK
         run: flutter build apk --release
 
-      - name: Build Play Store AAB Bundle
+      - name: Build App Bundle
         run: flutter build appbundle --release
 
-      - name: Upload Release APK Artifact
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: AttendTrack-Release-APK
           path: build/app/outputs/flutter-apk/app-release.apk
 
-      - name: Upload Play Store AAB Artifact
+      - name: Upload AAB Artifact
         uses: actions/upload-artifact@v4
         with:
           name: AttendTrack-PlayStore-AAB
