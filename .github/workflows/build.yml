@@ -65,3 +65,16 @@ jobs:
         with:
           name: AttendTrack-PlayStore-AAB
           path: build/app/outputs/bundle/release/app-release.aab
+      - name: Force compileSdk 36 for all Android modules
+        run: |
+          mkdir -p ~/.gradle/init.d
+          cat > ~/.gradle/init.d/compile-sdk.gradle <<'EOF'
+          allprojects {
+            afterEvaluate { project ->
+              if (project.hasProperty('android')) {
+                project.android.compileSdkVersion 36
+              }
+            }
+          }
+          EOF
+          
