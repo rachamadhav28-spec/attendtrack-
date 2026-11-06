@@ -1,4 +1,4 @@
-name: Build AttendTrack APK & AAB
+name: Build AttendTrack APK & Play Store AAB (With Root Firebase & QR/PDF)
 
 on:
   push:
@@ -24,47 +24,43 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Generate Android Platform Files
+      - name: Generate Android Platform Files (Package com.madhav.attendtrack)
         run: |
           flutter create --org com.madhav.attendtrack --project-name attendtrack .
 
-      - name: Move Root google-services.json
+      - name: Move Root google-services.json & Enable Firebase Gradle Plugin
         run: |
           if [ -f "google-services.json" ]; then
+            echo "Found google-services.json in root! Copying to android/app/..."
             cp google-services.json android/app/google-services.json
+          else
+            echo "WARNING: google-services.json not found in root!"
           fi
           sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 23/g' android/app/build.gradle || true
           sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 23/g' android/app/build.gradle || true
 
-      - name: Force compileSdk 36 for all Android modules
-        run: |
-          mkdir -p ~/.gradle/init.d
-          cat > ~/.gradle/init.d/compile-sdk.gradle <<'EOF'
-          allprojects {
-            afterEvaluate { p ->
-              if (p.hasProperty('android')) {
-                p.android.compileSdkVersion 36
-              }
-            }
-          }
-          EOF
-
-      - name: Install Dependencies
+      - name: Install Flutter Dependencies
         run: flutter pub get
 
-      - name: Build Release APK
+      - name: Generate Custom App Logo Icon (from root app_logo.jpg)
+        run: |
+          if [ -f "app_logo.jpg" ]; then
+            dart run flutter_launcher_icons
+          fi
+
+      - name: Build Release APK (For Testing on Phone)
         run: flutter build apk --release
 
-      - name: Build App Bundle
+      - name: Build Play Store AAB Bundle
         run: flutter build appbundle --release
 
-      - name: Upload APK Artifact
+      - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: AttendTrack-Release-APK
           path: build/app/outputs/flutter-apk/app-release.apk
 
-      - name: Upload AAB Artifact
+      - name: Upload Play Store AAB Artifact
         uses: actions/upload-artifact@v4
         with:
           name: AttendTrack-PlayStore-AAB
