@@ -465,42 +465,7 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
     await prefs.setString('year', _selectedYear);
 
     if ((prefs.getString('subjects') ?? '').isEmpty) {
-      final defaultSubs = [
-        SubjectModel(
-          name: 'Data Structures & Algorithms',
-          attendedHours: 0,
-          totalHours: 0,
-          scheduleSlot: '09:30 AM - 10:30 AM',
-          days: ['Mon', 'Wed', 'Fri'],
-        ),
-        SubjectModel(
-          name: 'Discrete Mathematics',
-          attendedHours: 0,
-          totalHours: 0,
-          scheduleSlot: '10:30 AM - 11:30 AM',
-          days: ['Tue', 'Thu', 'Sat'],
-        ),
-        SubjectModel(
-          name: 'Database Management Systems',
-          attendedHours: 0,
-          totalHours: 0,
-          scheduleSlot: '11:30 AM - 12:30 PM',
-          days: ['Mon', 'Wed', 'Fri'],
-        ),
-        SubjectModel(
-          name: 'Digital Logic Design',
-          attendedHours: 0,
-          totalHours: 0,
-          scheduleSlot: '01:30 PM - 02:30 PM',
-          days: ['Tue', 'Thu', 'Sat'],
-        ),
-        SubjectModel(
-          name: 'Python & DBMS Lab (3h)',
-          attendedHours: 0,
-          totalHours: 0,
-          scheduleSlot: '02:00 PM - 05:00 PM',
-          days: ['Wed', 'Fri'],
-        ),
+      final defaultSubs = <SubjectModel>[
       ];
       await prefs.setString(
         'subjects',
@@ -1057,10 +1022,16 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     final List<List<String>> daysList =
         draftList.map((s) => List<String>.from(s.days)).toList();
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      showDragHandle: false,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
+        builder: (ctx, setDialogState) => SheetDialog(
           title: const Text(
             'Check your timetable',
             
@@ -1208,10 +1179,16 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     final totCtrl = TextEditingController(text: sub.totalHours.toString());
     final List<String> selectedDays = List<String>.from(sub.days);
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      showDragHandle: false,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
+        builder: (ctx, setDialogState) => SheetDialog(
           title: const Text(
             'Edit subject',
             
@@ -1489,6 +1466,25 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                         },
                         child: const Text('Try again'),
                       ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: () async {
+                          final res = await FilePicker.platform
+                              .pickFiles(type: FileType.image);
+                          final path = res?.files.single.path;
+                          if (path == null) return;
+                          try {
+                            final cap = await controller.analyzeImage(path);
+                            final raw = cap?.barcodes.first.rawValue;
+                            if (raw != null && !handled) {
+                              handled = true;
+                              if (ctx.mounted) Navigator.pop(ctx);
+                              _importQrPayload(raw);
+                            }
+                          } catch (_) {}
+                        },
+                        child: const Text('Choose a QR photo instead'),
+                      ),
                     ],
                   ),
                 ),
@@ -1746,7 +1742,10 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
             child: SoftCard(
               child: Center(
                 child: Text(
-                  'No classes on this day.',
+                  _subjects.isEmpty
+                      ? 'No subjects yet. Tap Add subject, or import a timetable from the Profile tab.'
+                      : 'No classes on this day.',
+                  textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 13, color: AppColors.muted),
                 ),
               ),
@@ -1775,23 +1774,16 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
             children: [
               Row(
                 children: [
-                  AnimatedContainer(
-                    duration: kMed,
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: ok ? AppColors.goodSoft : AppColors.badSoft,
-                      shape: BoxShape.circle,
-                    ),
-                    alignment: Alignment.center,
-                    child: CountUp(
-                      value: sub.percentage,
-                      suffix: '%',
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: pctColor),
-                    ),
+                  PctRing(
+                    pct: sub.percentage,
+                    size: 56,
+                    stroke: 6,
+                    color: pctColor,
+                    track: ok ? AppColors.goodSoft : AppColors.badSoft,
+                    textStyle: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: pctColor),
                   ),
                   const SizedBox(width: 12),
                   Expanded(

@@ -521,3 +521,56 @@ class BoldPage extends StatelessWidget {
     );
   }
 }
+
+
+/// Bottom-sheet body with the same title / content / actions shape as AlertDialog.
+class SheetDialog extends StatelessWidget {
+  final Widget title;
+  final Widget content;
+  final List<Widget> actions;
+  const SheetDialog(
+      {super.key,
+      required this.title,
+      required this.content,
+      this.actions = const []});
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20, 12, 20, 16 + bottom),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: AppColors.line,
+                    borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            DefaultTextStyle(
+              style: const TextStyle(
+                  color: AppColors.ink,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700),
+              child: title,
+            ),
+            const SizedBox(height: 16),
+            Flexible(child: SingleChildScrollView(child: content)),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: actions,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
