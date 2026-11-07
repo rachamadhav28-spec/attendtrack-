@@ -569,14 +569,22 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
           const SizedBox(height: 8),
           FadeSlideIn(
             index: 5,
-            child: DropdownButtonFormField<String>(
-              value: _yearsForCourse.contains(_selectedYear)
-                  ? _selectedYear
-                  : _yearsForCourse.first,
-              items: _yearsForCourse
-                  .map((y) => DropdownMenuItem(value: y, child: Text(y)))
-                  .toList(),
-              onChanged: (v) => setState(() => _selectedYear = v!),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _yearsForCourse.map((y) {
+                final cur = _yearsForCourse.contains(_selectedYear)
+                    ? _selectedYear
+                    : _yearsForCourse.first;
+                return SizedBox(
+                  width: 104,
+                  child: AppPill(
+                    label: y,
+                    selected: cur == y,
+                    onTap: () => setState(() => _selectedYear = y),
+                  ),
+                );
+              }).toList(),
             ),
           ),
           const SizedBox(height: 16),
