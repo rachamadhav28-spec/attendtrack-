@@ -1403,7 +1403,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       facing: CameraFacing.back,
       detectionSpeed: DetectionSpeed.noDuplicates,
       autoStart: false,
-      useNewCameraSelector: true,
     );
     bool handled = false;
     // Start after the sheet has finished sliding in, so the camera
