@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'splash.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
@@ -30,10 +31,10 @@ class AttendTrackApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Attendance Track 75%',
+      title: 'AttendTrack',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      home: const RootFlowController(),
+      home: const AppEntry(),
     );
   }
 }
@@ -82,7 +83,7 @@ class AttendanceAppLogo extends StatelessWidget {
         if (showLabel) ...[
           const SizedBox(height: 8),
           const Text(
-            'Attendance Track 75%',
+            'AttendTrack',
             style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 16,
@@ -259,6 +260,31 @@ class CloudBackupService {
       debugPrint('Firestore restore error: $e');
     }
     return null;
+  }
+}
+
+class AppEntry extends StatefulWidget {
+  const AppEntry({super.key});
+
+  @override
+  State<AppEntry> createState() => _AppEntryState();
+}
+
+class _AppEntryState extends State<AppEntry> {
+  bool _splashDone = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: kMed,
+      child: _splashDone
+          ? const RootFlowController(key: ValueKey('root'))
+          : SplashScreen(
+              key: const ValueKey('splash'),
+              onDone: () {
+                if (mounted) setState(() => _splashDone = true);
+              }),
+    );
   }
 }
 
@@ -484,7 +510,7 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
             const AttendanceAppLogo(size: 72),
             const SizedBox(height: 12),
             const Text(
-              'Attendance Track 75%',
+              'AttendTrack',
               style: TextStyle(
                   color: Colors.white,
                   fontSize: 20,

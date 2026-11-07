@@ -5,15 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class AppColors {
-  static const Color primary = Color(0xFF2447D6);
-  static const Color primarySoft = Color(0xFF4766E0);
-  static const Color navy = Color(0xFF0F1B4D);
-  static const Color ink = Color(0xFF12214A);
-  static const Color muted = Color(0xFF4A5A80);
-  static const Color bg = Color(0xFFF5F7FB);
-  static const Color tint = Color(0xFFE8EEFF);
-  static const Color line = Color(0xFFE3E8F2);
-  static const Color good = Color(0xFF17703A);
+  static const Color primary = Color(0xFF0A8A5F);
+  static const Color primarySoft = Color(0xFF2FBF8A);
+  static const Color navy = Color(0xFF083D2C);
+  static const Color ink = Color(0xFF0E2A20);
+  static const Color muted = Color(0xFF4C6B5E);
+  static const Color bg = Color(0xFFF2FBF6);
+  static const Color tint = Color(0xFFDDF5E9);
+  static const Color line = Color(0xFFD9EBE1);
+  static const Color good = Color(0xFF0A6B47);
   static const Color goodSoft = Color(0xFFE3F5EA);
   static const Color bad = Color(0xFFB3261E);
   static const Color badSoft = Color(0xFFFDE7E4);

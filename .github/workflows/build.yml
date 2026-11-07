@@ -57,6 +57,7 @@ jobs:
                    '    <application')
           if 'android.permission.CAMERA' not in t:
               t = t.replace('<application', perms, 1)
+          t = re.sub(r'android:label="[^"]*"', 'android:label="AttendTrack"', t, count=1)
           open(m, 'w').write(t)
           # 2) Apply the Google services (Firebase) Gradle plugin
           for f in glob.glob('android/settings.gradle*'):
@@ -95,7 +96,7 @@ jobs:
 
       - name: Generate Custom App Logo Icon
         run: |
-          if [ -f "app_logo.jpg" ]; then
+          if [ -f "assets/icon/app_icon.png" ]; then
             dart run flutter_launcher_icons || echo "WARNING: icon generation failed, using default icon"
           fi
 
