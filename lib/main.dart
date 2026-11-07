@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'ui_kit.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,11 +32,7 @@ class AttendTrackApp extends StatelessWidget {
     return MaterialApp(
       title: 'Attendance Track 75%',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: const Color(0xFF3730A3),
-        scaffoldBackgroundColor: const Color(0xFFF4F6FB),
-      ),
+      theme: AppTheme.light,
       home: const RootFlowController(),
     );
   }
@@ -47,102 +45,60 @@ class AttendanceAppLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.88, end: 1.0),
-      duration: const Duration(milliseconds: 520),
-      curve: Curves.elasticOut,
-      builder: (context, scale, child) =>
-          Transform.scale(scale: scale, child: child),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+    final mark = Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(size * 0.27),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(size * 0.27),
-              gradient: const LinearGradient(
-                colors: [
-                  Color(0xFF60A5FA),
-                  Color(0xFF3B82F6),
-                  Color(0xFF2563EB)
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+          Icon(Icons.calendar_month_rounded,
+              size: size * 0.52, color: AppColors.primary),
+          Positioned(
+            bottom: size * 0.1,
+            right: size * 0.1,
+            child: Container(
+              width: size * 0.34,
+              height: size * 0.34,
+              decoration: BoxDecoration(
+                color: AppColors.good,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF2563EB).withOpacity(0.32),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Container(
-                  width: size * 0.62,
-                  height: size * 0.58,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(size * 0.1),
-                  ),
-                  child: Column(
-                    children: [
-                      Container(
-                        height: size * 0.14,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEFF6FF),
-                          borderRadius: BorderRadius.vertical(
-                            top: Radius.circular(size * 0.1),
-                          ),
-                        ),
-                      ),
-                      const Expanded(
-                        child: Icon(
-                          Icons.calendar_month_rounded,
-                          color: Color(0xFF93C5FD),
-                          size: 22,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Positioned(
-                  bottom: size * 0.08,
-                  right: size * 0.08,
-                  child: Container(
-                    width: size * 0.36,
-                    height: size * 0.36,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF22C55E),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                    child: Icon(
-                      Icons.check_rounded,
-                      color: Colors.white,
-                      size: size * 0.22,
-                    ),
-                  ),
-                ),
-              ],
+              child: Icon(Icons.check_rounded,
+                  color: Colors.white, size: size * 0.2),
             ),
           ),
-          if (showLabel) ...[
-            const SizedBox(height: 6),
-            const Text(
-              'Attendance Track 75%',
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 16,
-                color: Color(0xFF0F296B),
-              ),
-            ),
-          ],
         ],
       ),
+    );
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        mark,
+        if (showLabel) ...[
+          const SizedBox(height: 8),
+          const Text(
+            'Attendance Track 75%',
+            style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+                color: AppColors.ink),
+          ),
+        ],
+      ],
+    );
+    if (reduceMotion(context)) return content;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.9, end: 1.0),
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutBack,
+      builder: (context, scale, child) =>
+          Transform.scale(scale: scale, child: child),
+      child: content,
     );
   }
 }
@@ -522,185 +478,176 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(22),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Center(child: AttendanceAppLogo(size: 76, showLabel: true)),
-              const SizedBox(height: 20),
-              const Text(
-                '1. Enter Your Full Name *',
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+      body: BoldPage(
+        header: Column(
+          children: [
+            const AttendanceAppLogo(size: 72),
+            const SizedBox(height: 12),
+            const Text(
+              'Attendance Track 75%',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Set up your profile to start tracking.',
+              style: TextStyle(color: Colors.white, fontSize: 13),
+            ),
+          ],
+        ),
+        children: [
+          FadeSlideIn(
+            child: _fieldLabel('Full name'),
+          ),
+          const SizedBox(height: 8),
+          FadeSlideIn(
+            index: 1,
+            child: TextField(
+              controller: _nameCtrl,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(
+                hintText: 'e.g. Madhav',
+                prefixIcon: Icon(Icons.person_rounded),
               ),
-              const SizedBox(height: 6),
-              TextField(
-                controller: _nameCtrl,
-                decoration: InputDecoration(
-                  hintText: 'e.g. Madhav',
-                  prefixIcon: const Icon(Icons.person_rounded),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                '2. Select Course (B.Tech / Degree / Other) *',
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: ['B.Tech', 'Degree', 'Other'].map((c) {
-                  final selected = _selectedCourse == c;
-                  return Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: ChoiceChip(
-                        label: SizedBox(
-                          width: double.infinity,
-                          child: Text(
-                            c,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: selected ? Colors.white : Colors.black87,
-                            ),
-                          ),
-                        ),
-                        selected: selected,
-                        selectedColor: const Color(0xFF3730A3),
-                        onSelected: (_) {
-                          setState(() {
-                            _selectedCourse = c;
-                            _selectedYear = _yearsForCourse.first;
-                          });
-                        },
-                      ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          FadeSlideIn(index: 2, child: _fieldLabel('Course')),
+          const SizedBox(height: 8),
+          FadeSlideIn(
+            index: 3,
+            child: Row(
+              children: ['B.Tech', 'Degree', 'Other'].map((c) {
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: AppPill(
+                      label: c,
+                      selected: _selectedCourse == c,
+                      onTap: () {
+                        setState(() {
+                          _selectedCourse = c;
+                          _selectedYear = _yearsForCourse.first;
+                        });
+                      },
                     ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                '3. Which Year? *',
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
-              ),
-              const SizedBox(height: 6),
-              DropdownButtonFormField<String>(
-                value: _yearsForCourse.contains(_selectedYear)
-                    ? _selectedYear
-                    : _yearsForCourse.first,
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
                   ),
-                ),
-                items: _yearsForCourse
-                    .map((y) => DropdownMenuItem(value: y, child: Text(y)))
-                    .toList(),
-                onChanged: (v) => setState(() => _selectedYear = v!),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 16),
+          FadeSlideIn(index: 4, child: _fieldLabel('Year')),
+          const SizedBox(height: 8),
+          FadeSlideIn(
+            index: 5,
+            child: DropdownButtonFormField<String>(
+              value: _yearsForCourse.contains(_selectedYear)
+                  ? _selectedYear
+                  : _yearsForCourse.first,
+              items: _yearsForCourse
+                  .map((y) => DropdownMenuItem(value: y, child: Text(y)))
+                  .toList(),
+              onChanged: (v) => setState(() => _selectedYear = v!),
+            ),
+          ),
+          const SizedBox(height: 16),
+          FadeSlideIn(index: 6, child: _fieldLabel('Gmail (used for cloud backup)')),
+          const SizedBox(height: 8),
+          FadeSlideIn(
+            index: 7,
+            child: TextField(
+              controller: _emailCtrl,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                hintText: 'yourname@gmail.com',
+                prefixIcon: Icon(Icons.mail_outline_rounded),
               ),
-              const SizedBox(height: 16),
-              const Text(
-                '4. Your Gmail (For Cloud Backup & Restore After Reinstall)',
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
-              ),
-              const SizedBox(height: 6),
-              TextField(
-                controller: _emailCtrl,
-                keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(
-                  hintText: 'yourname@gmail.com',
-                  prefixIcon: const Icon(Icons.cloud_done_rounded),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 54,
+            ),
+          ),
+          const SizedBox(height: 24),
+          FadeSlideIn(
+            index: 8,
+            child: SizedBox(
+              width: double.infinity,
+              child: PressScale(
                 child: FilledButton.icon(
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF3730A3),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
+                      minimumSize: const Size(0, 52)),
                   onPressed: _saveAndGoToProfile,
                   icon: const Icon(Icons.arrow_forward_rounded),
-                  label: const Text(
-                    'Continue to Profile & Timetable Upload',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                  ),
+                  label: const Text('Continue'),
                 ),
               ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEEF2FF),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFC7D2FE)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.restore_rounded,
-                            color: Color(0xFF3730A3), size: 20),
-                        SizedBox(width: 6),
-                        Text(
-                          'Deleted App? Restore Attendance from Cloud',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 12,
-                            color: Color(0xFF1E1B4B),
-                          ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          FadeSlideIn(
+            index: 8,
+            child: SoftCard(
+              color: AppColors.tint,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.restore_rounded, color: AppColors.primary),
+                      SizedBox(width: 8),
+                      Text(
+                        'Reinstalled the app?',
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.ink),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Sign in with the Google account you used before to restore your subjects and attendance.',
+                    style: TextStyle(fontSize: 13, color: AppColors.muted),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: PressScale(
+                      child: FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: AppColors.primary,
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Sign in with the Google account you used before to restore all your subjects and attendance hours:',
-                      style: TextStyle(fontSize: 11, color: Colors.black54),
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
                         onPressed:
                             _isRestoring ? null : _handleRestoreFromCloud,
-                        child: Text(
-                          _isRestoring
-                              ? 'Restoring...'
-                              : 'Sign in with Google & Restore',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
+                        icon: _isRestoring
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.login_rounded),
+                        label: Text(_isRestoring
+                            ? 'Restoring...'
+                            : 'Sign in with Google and restore'),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
+
+  Widget _fieldLabel(String t) => Text(
+        t,
+        style: const TextStyle(
+            fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink),
+      );
 }
 
 class MainDashboardScreen extends StatefulWidget {
@@ -744,6 +691,15 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     'Sat': 'Saturday',
   };
   String _selectedDayMode = 'All';
+  int? _flashIdx;
+  bool _flashPresent = true;
+  Timer? _flashTimer;
+
+  @override
+  void dispose() {
+    _flashTimer?.cancel();
+    super.dispose();
+  }
 
   List<SubjectModel> _subjects = [];
   Set<String> _holidays = {};
@@ -858,14 +814,14 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     return n > 0 ? n : 1;
   }
 
-  void _logAttendance(int index, int hours, bool present) {
+  bool _logAttendance(int index, int hours, bool present) {
     final dateKey = DateFormat('yyyy-MM-dd').format(_selectedCalendarDate);
     if (_holidays.contains(dateKey)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             content: Text('Selected date is marked as a Holiday!')),
       );
-      return;
+      return false;
     }
 
     final timeStr = DateFormat('hh:mm a').format(DateTime.now());
@@ -886,6 +842,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       );
     });
     _saveAllData();
+    return true;
   }
 
   void _undoLogItem(AttendanceLogItem item) {
@@ -1423,6 +1380,10 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       isScrollControlled: true,
       enableDrag: false,
       backgroundColor: Colors.black,
+      clipBehavior: Clip.antiAlias,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) => SizedBox(
         height: MediaQuery.of(ctx).size.height * 0.75,
         child: Stack(
@@ -1454,6 +1415,18 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 }
               },
             ),
+            Center(
+              child: IgnorePointer(
+                child: Container(
+                  width: 240,
+                  height: 240,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.white, width: 3),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                ),
+              ),
+            ),
             Positioned(
               top: 20,
               left: 20,
@@ -1484,35 +1457,42 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final pages = <Widget Function()>[
+      _buildHomeTab,
+      _buildHistoryTab,
+      _buildQrAndStatsTab,
+      _buildProfileAndTimetableTab,
+    ];
     return Scaffold(
       body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 280),
+        duration: kMed,
         switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
+        switchOutCurve: Curves.easeIn,
+        transitionBuilder: (child, anim) =>
+            reduceMotion(context) ? child : tabTransition(child, anim),
         child: KeyedSubtree(
           key: ValueKey<int>(_currentTab),
-          child: [
-            _buildHomeTab(),
-            _buildHistoryTab(),
-            _buildQrAndStatsTab(),
-            _buildProfileAndTimetableTab(),
-          ][_currentTab],
+          child: pages[_currentTab](),
         ),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentTab,
-        onDestinationSelected: (idx) => setState(() => _currentTab = idx),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_rounded), label: 'Home'),
-          NavigationDestination(
-              icon: Icon(Icons.calendar_month_rounded), label: 'History'),
-          NavigationDestination(
-              icon: Icon(Icons.qr_code_scanner_rounded), label: 'QR Scan'),
-          NavigationDestination(
-              icon: Icon(Icons.person_rounded), label: 'Profile & PDF'),
-        ],
+      bottomNavigationBar: AppNavBar(
+        index: _currentTab,
+        onTap: (idx) => setState(() => _currentTab = idx),
       ),
     );
+  }
+
+  void _mark(int i, bool present) {
+    final ok = _logAttendance(i, 1, present);
+    if (!ok) return;
+    setState(() {
+      _flashIdx = i;
+      _flashPresent = present;
+    });
+    _flashTimer?.cancel();
+    _flashTimer = Timer(const Duration(milliseconds: 900), () {
+      if (mounted) setState(() => _flashIdx = null);
+    });
   }
 
   Widget _buildHomeTab() {
@@ -1523,32 +1503,203 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       return entry.value.days.contains(activeDay);
     }).toList();
 
-    return ListView(
-      padding: EdgeInsets.zero,
-      children: [
-        Container(
-          padding: const EdgeInsets.fromLTRB(20, 52, 20, 26),
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF1E1B4B), Color(0xFF1E3A8A), Color(0xFF2563EB)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
+    return BoldPage(
+      header: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: AppColors.primarySoft,
+                child: Text(
+                  _userName.isNotEmpty ? _userName[0].toUpperCase() : 'S',
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w600),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Hi, $_userName',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      '$_course • $_year',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () => setState(() => _currentTab = 3),
+                icon: const Icon(Icons.upload_file_rounded, color: Colors.white),
+                tooltip: 'Upload timetable',
+              ),
+            ],
           ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              PctRing(
+                pct: _overallPct,
+                size: 112,
+                textStyle: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Overall attendance',
+                        style: TextStyle(color: Colors.white, fontSize: 13)),
+                    const SizedBox(height: 8),
+                    AnimatedSwitcher(
+                      duration: kFast,
+                      child: Text(
+                        isSafe ? 'Safe zone' : 'Below 75%',
+                        key: ValueKey<bool>(isSafe),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      isSafe
+                          ? 'You can skip $_overallSafeBunks more hours.'
+                          : 'Attend the next $_overallNeededFor75 hours to reach 75%.',
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      children: [
+        FadeSlideIn(
+          child: Row(
+            children: [
+              _statCard('Total hours', _totalConducted, AppColors.ink),
+              const SizedBox(width: 8),
+              _statCard('Present', _totalPresent, AppColors.good),
+              const SizedBox(width: 8),
+              _statCard('Absent', _totalAbsent, AppColors.bad),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        FadeSlideIn(
+          index: 1,
+          child: Row(
+            children: ['All', ..._weekDays].map((d) {
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: AppPill(
+                    label: d,
+                    selected: activeDay == d,
+                    onTap: () => setState(() => _selectedDayMode = d),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Text(
+                activeDay == 'All'
+                    ? 'All subjects (${_subjects.length})'
+                    : "${_fullDayNames[activeDay]}'s classes (${visibleSubjects.length})",
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                    color: AppColors.ink),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () {
+                setState(() {
+                  _subjects.add(SubjectModel(name: 'New Subject'));
+                });
+                _showEditSingleSubjectDialog(_subjects.length - 1);
+              },
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Add subject'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (visibleSubjects.isEmpty)
+          const FadeSlideIn(
+            child: SoftCard(
+              child: Center(
+                child: Text(
+                  'No classes on this day.',
+                  style: TextStyle(fontSize: 13, color: AppColors.muted),
+                ),
+              ),
+            ),
+          )
+        else
+          ...visibleSubjects.asMap().entries.map(
+                (e) => _subjectCard(e.value.key, e.value.value, e.key),
+              ),
+      ],
+    );
+  }
+
+  Widget _subjectCard(int i, SubjectModel sub, int order) {
+    final ok = sub.percentage >= 75.0;
+    final flash = _flashIdx == i;
+    final pctColor = ok ? AppColors.good : AppColors.bad;
+    return FadeSlideIn(
+      key: ValueKey('${sub.name}-$_selectedDayMode-$i'),
+      index: order,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: SoftCard(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: Colors.white24,
-                    child: Text(
-                      _userName.isNotEmpty ? _userName[0].toUpperCase() : 'S',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  AnimatedContainer(
+                    duration: kMed,
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: ok ? AppColors.goodSoft : AppColors.badSoft,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: CountUp(
+                      value: sub.percentage,
+                      suffix: '%',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: pctColor),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1557,419 +1708,104 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Hello, $_userName!',
+                          sub.name,
                           style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 19,
-                            fontWeight: FontWeight.w900,
-                          ),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.ink),
                         ),
+                        const SizedBox(height: 4),
                         Text(
-                          '$_course • $_year',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          '${sub.scheduleSlot} • ${sub.days.join(", ")}',
                           style: const TextStyle(
-                              color: Colors.white70, fontSize: 12),
+                              fontSize: 13, color: AppColors.muted),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
-                    onPressed: () => setState(() => _currentTab = 3),
-                    icon: const Icon(Icons.upload_file_rounded,
-                        color: Colors.white),
-                    tooltip: 'Upload Timetable PDF',
+                    onPressed: () => _showEditSingleSubjectDialog(i),
+                    icon: const Icon(Icons.edit_outlined,
+                        size: 20, color: AppColors.primary),
+                    tooltip: 'Edit subject',
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color:
-                      isSafe ? const Color(0xFFD1FAE5) : const Color(0xFFFEE2E2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: isSafe
-                          ? const Color(0xFF10B981)
-                          : const Color(0xFFEF4444),
-                      child: Icon(
-                        isSafe ? Icons.check_rounded : Icons.warning_rounded,
-                        color: Colors.white,
+              const SizedBox(height: 12),
+              AnimatedBar(
+                value: sub.percentage / 100.0,
+                color: pctColor,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                ok
+                    ? 'Safe to skip ${sub.safeBunks} classes • Attended ${sub.attendedHours} of ${sub.totalHours}'
+                    : 'Attend next ${sub.classesNeededFor75} classes for 75% • Attended ${sub.attendedHours} of ${sub.totalHours}',
+                style: const TextStyle(fontSize: 13, color: AppColors.muted),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: PressScale(
+                      child: FilledButton(
+                        onPressed: () => _mark(i, true),
+                        child: AnimatedSwitcher(
+                          duration: kFast,
+                          transitionBuilder: (c, a) =>
+                              ScaleTransition(scale: a, child: c),
+                          child: (flash && _flashPresent)
+                              ? const Icon(Icons.check_rounded,
+                                  key: ValueKey('p-check'))
+                              : const Text('Present', key: ValueKey('p-text')),
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Overall Attendance: ${_overallPct.toStringAsFixed(1)}%',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w900,
-                              fontSize: 16,
-                            ),
-                          ),
-                          Text(
-                            isSafe
-                                ? 'Safe to skip $_overallSafeBunks hours'
-                                : 'Attend next $_overallNeededFor75 hours for 75%',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: isSafe
-                                  ? const Color(0xFF065F46)
-                                  : const Color(0xFF991B1B),
-                            ),
-                          ),
-                        ],
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: PressScale(
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.tint,
+                          foregroundColor: AppColors.primary,
+                        ),
+                        onPressed: () => _mark(i, false),
+                        child: AnimatedSwitcher(
+                          duration: kFast,
+                          transitionBuilder: (c, a) =>
+                              ScaleTransition(scale: a, child: c),
+                          child: (flash && !_flashPresent)
+                              ? const Icon(Icons.close_rounded,
+                                  key: ValueKey('a-x'))
+                              : const Text('Absent', key: ValueKey('a-text')),
+                        ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  _statCard('Total Hours', '$_totalConducted',
-                      const Color(0xFF3730A3)),
-                  const SizedBox(width: 8),
-                  _statCard(
-                      'Present', '$_totalPresent', const Color(0xFF10B981)),
-                  const SizedBox(width: 8),
-                  _statCard('Absent', '$_totalAbsent', const Color(0xFFEF4444)),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'WEEK DAY TIMETABLE',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 11,
-                                color: Colors.black54,
-                              ),
-                            ),
-                            Text(
-                              activeDay == 'All'
-                                  ? 'Showing: All Subjects (Mon - Sat)'
-                                  : '${_fullDayNames[activeDay] ?? activeDay}\'s Classes',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 12,
-                                color: Color(0xFF3730A3),
-                              ),
-                            ),
-                          ],
-                        ),
-                        TextButton(
-                          onPressed: () =>
-                              setState(() => _selectedDayMode = 'All'),
-                          child: const Text('All Days',
-                              style: TextStyle(fontSize: 11)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: _weekDays.map((d) {
-                        final isSelected = activeDay == d;
-                        return Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 2),
-                            child: InkWell(
-                              onTap: () =>
-                                  setState(() => _selectedDayMode = d),
-                              child: Container(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? const Color(0xFF3730A3)
-                                      : const Color(0xFFF1F5F9),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  d,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w900,
-                                    color: isSelected
-                                        ? Colors.white
-                                        : Colors.black87,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    activeDay == 'All'
-                        ? 'All Subjects (${_subjects.length})'
-                        : '${_fullDayNames[activeDay]}\'s Classes (${visibleSubjects.length})',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w900, fontSize: 15),
-                  ),
-                  TextButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        _subjects.add(SubjectModel(name: 'New Subject'));
-                      });
-                      _showEditSingleSubjectDialog(_subjects.length - 1);
-                    },
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Add Subject'),
-                  ),
-                ],
-              ),
-              ...visibleSubjects.map((entry) {
-                final i = entry.key;
-                final sub = entry.value;
-                final ok = sub.percentage >= 75.0;
-
-                return TweenAnimationBuilder<double>(
-                  key: ValueKey(sub.name),
-                  tween: Tween(begin: 0.94, end: 1.0),
-                  duration: Duration(milliseconds: 240 + (i * 45)),
-                  curve: Curves.easeOutBack,
-                  builder: (context, scale, child) =>
-                      Transform.scale(scale: scale, child: child),
-                  child: Card(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    color: Colors.white,
-                    elevation: 0.5,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        sub.name,
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14),
-                                      ),
-                                    ),
-                                    IconButton(
-                                      onPressed: () =>
-                                          _showEditSingleSubjectDialog(i),
-                                      icon: const Icon(Icons.edit_outlined,
-                                          size: 18, color: Color(0xFF3730A3)),
-                                      tooltip: 'Edit Subject & Classes Done',
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Text(
-                                '${sub.percentage.toStringAsFixed(1)}%',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  color: ok
-                                      ? const Color(0xFF059669)
-                                      : const Color(0xFFDC2626),
-                                ),
-                              ),
-                            ],
-                          ),
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 4,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFEEF2FF),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                      color: const Color(0xFFC7D2FE)),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.access_time_rounded,
-                                        size: 12, color: Color(0xFF3730A3)),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      sub.scheduleSlot,
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w800,
-                                        color: Color(0xFF3730A3),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF1F5F9),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  'Days: ${sub.days.join(", ")}',
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black54,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          TweenAnimationBuilder<double>(
-                            tween: Tween(
-                                begin: 0,
-                                end: (sub.percentage / 100.0).clamp(0.0, 1.0)),
-                            duration: const Duration(milliseconds: 650),
-                            curve: Curves.easeOutCubic,
-                            builder: (ctx, val, _) => ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
-                              child: LinearProgressIndicator(
-                                value: val,
-                                minHeight: 5,
-                                backgroundColor: const Color(0xFFF1F5F9),
-                                color: ok
-                                    ? const Color(0xFF10B981)
-                                    : const Color(0xFFEF4444),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            ok
-                                ? 'Safe to skip ${sub.safeBunks} classes • Attended: ${sub.attendedHours} / Done: ${sub.totalHours}'
-                                : 'Attend next ${sub.classesNeededFor75} classes for 75% • Attended: ${sub.attendedHours} / Done: ${sub.totalHours}',
-                            style: const TextStyle(
-                                fontSize: 11, color: Colors.black54),
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: FilledButton.icon(
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: const Color(0xFF10B981),
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 10),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  onPressed: () => _logAttendance(i, 1, true),
-                                  icon:
-                                      const Icon(Icons.check_rounded, size: 16),
-                                  label: const Text(
-                                    'Present',
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: const Color(0xFFEF4444),
-                                    side: const BorderSide(
-                                        color: Color(0xFFFECACA)),
-                                    backgroundColor: const Color(0xFFFEF2F2),
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 10),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  onPressed: () => _logAttendance(i, 1, false),
-                                  icon:
-                                      const Icon(Icons.close_rounded, size: 16),
-                                  label: const Text(
-                                    'Absent',
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }),
-            ],
-          ),
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _statCard(String label, String val, Color color) {
+  Widget _statCard(String label, int val, Color color) {
     return Expanded(
-      child: Container(
+      child: SoftCard(
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-        ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(label,
-                style: const TextStyle(fontSize: 11, color: Colors.black54)),
+                style: const TextStyle(fontSize: 13, color: AppColors.muted)),
             const SizedBox(height: 4),
-            Text(
-              val,
+            CountUp(
+              value: val,
               style: TextStyle(
-                  fontSize: 20, fontWeight: FontWeight.w900, color: color),
+                  fontSize: 20, fontWeight: FontWeight.w600, color: color),
             ),
           ],
         ),
@@ -1982,35 +1818,55 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     final dayLogs =
         _historyLogs.where((l) => l.dateKey == selectedKey).toList();
     final isHoliday = _holidays.contains(selectedKey);
+    final presentCount = dayLogs.where((l) => l.present).length;
+    final absentCount = dayLogs.length - presentCount;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Attendance History',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        actions: [
-          TextButton.icon(
-            onPressed: () {
-              setState(() {
-                if (isHoliday) {
-                  _holidays.remove(selectedKey);
-                } else {
-                  _holidays.add(selectedKey);
-                }
-              });
-              _saveAllData();
-            },
-            icon: const Icon(Icons.wb_sunny_outlined, size: 18),
-            label: Text(isHoliday ? 'Unmark Holiday' : 'Mark Holiday'),
+    return BoldPage(
+      header: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Attendance history',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text(
+                  DateFormat('EEEE, d MMM yyyy').format(_selectedCalendarDate),
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+          PressScale(
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primarySoft,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                setState(() {
+                  if (isHoliday) {
+                    _holidays.remove(selectedKey);
+                  } else {
+                    _holidays.add(selectedKey);
+                  }
+                });
+                _saveAllData();
+              },
+              icon: const Icon(Icons.wb_sunny_outlined, size: 18),
+              label: Text(isHoliday ? 'Unmark holiday' : 'Mark holiday'),
+            ),
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Card(
-            color: Colors.white,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      children: [
+        FadeSlideIn(
+          child: SoftCard(
+            padding: EdgeInsets.zero,
             child: CalendarDatePicker(
               initialDate: _selectedCalendarDate,
               firstDate: DateTime(2024),
@@ -2018,241 +1874,83 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
               onDateChanged: (dt) => setState(() => _selectedCalendarDate = dt),
             ),
           ),
-          const SizedBox(height: 16),
-          Text(
-            'Logs on $selectedKey (${dayLogs.length})',
-            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
-          ),
-          const SizedBox(height: 8),
-          if (dayLogs.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Text(
-                'No classes logged for this date yet.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.black54),
-              ),
-            )
-          else
-            ...dayLogs.map((item) => Card(
-                  color: Colors.white,
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: item.present
-                          ? const Color(0xFFD1FAE5)
-                          : const Color(0xFFFEE2E2),
-                      child: Icon(
-                        item.present ? Icons.check : Icons.close,
-                        color: item.present
-                            ? const Color(0xFF059669)
-                            : const Color(0xFFDC2626),
-                      ),
-                    ),
-                    title: Text(item.subject,
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text(
-                        '${item.present ? "Present" : "Absent"} (${item.hours}h) • ${item.timeStr}'),
-                    trailing: TextButton(
-                      onPressed: () => _undoLogItem(item),
-                      child: const Text('Undo',
-                          style: TextStyle(color: Colors.red)),
-                    ),
-                  ),
-                )),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQrAndStatsTab() {
-    final qrPayload = _generateQrSharePayload();
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('QR Timetable & Camera Scanner',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E1B4B),
-              borderRadius: BorderRadius.circular(22),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.qr_code_scanner_rounded,
-                        color: Color(0xFF34D399)),
-                    SizedBox(width: 8),
-                    Text(
-                      'In-App Camera QR Scanner',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Point your camera at a classmate\'s QR code to copy their subjects & day-wise timetable automatically.',
-                  style: TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF10B981),
-                      foregroundColor: Colors.black,
-                    ),
-                    onPressed: _openLiveCameraQrScanner,
-                    icon: const Icon(Icons.camera_alt_rounded),
-                    label: const Text(
-                      'Open Camera QR Scanner',
-                      style: TextStyle(fontWeight: FontWeight.w900),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            color: Colors.white,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  const Text(
-                    'Share Your Class Timetable QR',
-                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
-                  ),
-                  const SizedBox(height: 12),
-                  Builder(builder: (_) {
-                    final h = _qrHash(qrPayload);
-                    final style = kQrStyles[(h ~/ 1000000) % kQrStyles.length];
-                    final code6 = (h % 1000000).toString().padLeft(6, '0');
-                    final qr = QrImage(QrCode.fromData(
-                      data: qrPayload,
-                      errorCorrectLevel: QrErrorCorrectLevel.M,
-                    ));
-                    return Column(
+        ),
+        AnimatedSize(
+          duration: kMed,
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: isHoliday
+              ? const Padding(
+                  padding: EdgeInsets.only(top: 12),
+                  child: SoftCard(
+                    color: AppColors.tint,
+                    child: Row(
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(14),
-                          child: SizedBox(
-                            width: 250,
-                            height: 250,
-                            child: CustomPaint(
-                              painter: StyledQrPainter(qr, style),
-                            ),
+                        Icon(Icons.wb_sunny_outlined, color: AppColors.primary),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Holiday. Attendance is paused for this date.',
+                            style:
+                                TextStyle(fontSize: 13, color: AppColors.ink),
                           ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          'Theme: ${style.name}',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w800, fontSize: 14),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          code6,
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 4,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 4,
-                          alignment: WrapAlignment.center,
-                          children: _subjects
-                              .map((sub) => Chip(
-                                    label: Text(sub.name,
-                                        style: const TextStyle(fontSize: 11)),
-                                    visualDensity: VisualDensity.compact,
-                                  ))
-                              .toList(),
                         ),
                       ],
-                    );
-                  }),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: qrPayload));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Copied Class Code!')),
-                        );
-                      },
-                      icon: const Icon(Icons.copy_rounded, size: 16),
-                      label: const Text('Copy Timetable Text Code'),
                     ),
                   ),
-                ],
+                )
+              : const SizedBox(width: double.infinity),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Logs on $selectedKey',
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                    color: AppColors.ink),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProfileAndTimetableTab() {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Student Profile & Timetable',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        actions: [
-          TextButton.icon(
-            onPressed: widget.onEditProfileRequested,
-            icon: const Icon(Icons.edit, size: 16),
-            label: const Text('Edit Setup'),
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Card(
-            color: Colors.white,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+            Text(
+              'Present $presentCount • Absent $absentCount',
+              style: const TextStyle(fontSize: 13, color: AppColors.muted),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (dayLogs.isEmpty)
+          const FadeSlideIn(
+            child: SoftCard(
+              child: Center(
+                child: Text(
+                  'No classes logged for this date yet.',
+                  style: TextStyle(fontSize: 13, color: AppColors.muted),
+                ),
+              ),
+            ),
+          )
+        else
+          ...dayLogs.asMap().entries.map((e) {
+            final item = e.value;
+            return FadeSlideIn(
+              key: ValueKey(item.id),
+              index: e.key,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: SoftCard(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Row(
                     children: [
                       CircleAvatar(
-                        radius: 26,
-                        backgroundColor: const Color(0xFF3730A3),
-                        child: Text(
-                          _userName.isNotEmpty
-                              ? _userName[0].toUpperCase()
-                              : 'S',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
-                          ),
+                        backgroundColor: item.present
+                            ? AppColors.goodSoft
+                            : AppColors.badSoft,
+                        child: Icon(
+                          item.present ? Icons.check : Icons.close,
+                          color: item.present ? AppColors.good : AppColors.bad,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -2260,148 +1958,349 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Text(item.subject,
+                                style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.ink)),
                             Text(
-                              _userName,
+                              '${item.present ? "Present" : "Absent"} (${item.hours}h) • ${item.timeStr}',
                               style: const TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 17,
-                              ),
-                            ),
-                            Text(
-                              _userEmail,
-                              style: const TextStyle(
-                                  fontSize: 12, color: Colors.black54),
+                                  fontSize: 13, color: AppColors.muted),
                             ),
                           ],
                         ),
                       ),
+                      TextButton(
+                        onPressed: () => _undoLogItem(item),
+                        style: TextButton.styleFrom(
+                            foregroundColor: AppColors.bad),
+                        child: const Text('Undo'),
+                      ),
                     ],
                   ),
-                  const Divider(height: 24),
-                  _profileRow('Course / Stream', _course),
-                  const SizedBox(height: 8),
-                  _profileRow('Current Year', _year),
-                ],
+                ),
+              ),
+            );
+          }),
+      ],
+    );
+  }
+
+  Widget _qrBlock(String qrPayload) {
+    final h = _qrHash(qrPayload);
+    final style = kQrStyles[(h ~/ 1000000) % kQrStyles.length];
+    final code6 = (h % 1000000).toString().padLeft(6, '0');
+    final qr = QrImage(QrCode.fromData(
+      data: qrPayload,
+      errorCorrectLevel: QrErrorCorrectLevel.M,
+    ));
+    return Column(
+      key: ValueKey(code6),
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: SizedBox(
+            width: 250,
+            height: 250,
+            child: CustomPaint(painter: StyledQrPainter(qr, style)),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.tint,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            'Theme: ${style.name}',
+            style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          code6,
+          style: const TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 4,
+            color: AppColors.ink,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 6,
+          runSpacing: 4,
+          alignment: WrapAlignment.center,
+          children: _subjects
+              .map((sub) => Chip(
+                    label: Text(sub.name, style: const TextStyle(fontSize: 13)),
+                    visualDensity: VisualDensity.compact,
+                  ))
+              .toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQrAndStatsTab() {
+    final qrPayload = _generateQrSharePayload();
+    return BoldPage(
+      header: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Share timetable',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600)),
+          const SizedBox(height: 4),
+          const Text(
+            "Scan a classmate's QR to copy their subjects and days.",
+            style: TextStyle(color: Colors.white, fontSize: 13),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: PressScale(
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: AppColors.primary,
+                  minimumSize: const Size(0, 52),
+                ),
+                onPressed: _openLiveCameraQrScanner,
+                icon: const Icon(Icons.camera_alt_rounded),
+                label: const Text('Scan classmate QR'),
               ),
             ),
           ),
-          const SizedBox(height: 18),
-          const Text(
-            'TIME TABLE',
-            style: TextStyle(
-              fontWeight: FontWeight.w900,
-              fontSize: 14,
-              letterSpacing: 0.8,
-              color: Color(0xFF1E1B4B),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEEF2FF),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFC7D2FE)),
-            ),
+        ],
+      ),
+      children: [
+        FadeSlideIn(
+          child: SoftCard(
+            padding: const EdgeInsets.all(20),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
-                  children: [
-                    Icon(Icons.picture_as_pdf_rounded,
-                        color: Color(0xFF3730A3), size: 28),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Upload Timetable PDF or Image (<3s Auto-Fill & Dedupe)',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Uploaded File: $_timetableFile (${_subjects.length} unique subjects)',
-                  style: const TextStyle(fontSize: 12, color: Colors.black87),
+                const Text(
+                  'Your timetable QR',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      color: AppColors.ink),
                 ),
                 const SizedBox(height: 12),
+                AnimatedSwitcher(
+                  duration: kMed,
+                  transitionBuilder: (child, anim) => FadeTransition(
+                    opacity: anim,
+                    child: ScaleTransition(
+                      scale: Tween<double>(begin: 0.94, end: 1).animate(anim),
+                      child: child,
+                    ),
+                  ),
+                  child: _qrBlock(qrPayload),
+                ),
+                const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF3730A3),
-                    ),
-                    onPressed:
-                        _isReadingTimetable ? null : _pickAndReadTimetablePdf,
-                    icon: const Icon(Icons.upload_file_rounded),
-                    label: Text(
-                      _isReadingTimetable
-                          ? 'Reading PDF (<3s)...'
-                          : 'Upload PDF / Image for Time Table',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                  child: PressScale(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: qrPayload));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Copied class code!')),
+                        );
+                      },
+                      icon: const Icon(Icons.copy_rounded, size: 18),
+                      label: const Text('Copy timetable code'),
                     ),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 18),
-          Card(
-            color: Colors.white,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.cloud_done_rounded, color: Color(0xFF059669)),
-                      SizedBox(width: 8),
-                      Text(
-                        'Firebase Cloud Backup (Uninstall Protection)',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProfileAndTimetableTab() {
+    final signedIn = CloudBackupService.user != null;
+    return BoldPage(
+      header: Row(
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: AppColors.primarySoft,
+            child: Text(
+              _userName.isNotEmpty ? _userName[0].toUpperCase() : 'S',
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 20),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _userName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  _userEmail,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+          TextButton.icon(
+            style: TextButton.styleFrom(foregroundColor: Colors.white),
+            onPressed: widget.onEditProfileRequested,
+            icon: const Icon(Icons.edit, size: 16),
+            label: const Text('Edit setup'),
+          ),
+        ],
+      ),
+      children: [
+        FadeSlideIn(
+          child: SoftCard(
+            child: Column(
+              children: [
+                _profileRow('Course', _course),
+                const SizedBox(height: 8),
+                _profileRow('Year', _year),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        FadeSlideIn(
+          index: 1,
+          child: SoftCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.picture_as_pdf_rounded,
+                        color: AppColors.primary),
+                    SizedBox(width: 8),
+                    Text('Timetable',
                         style: TextStyle(
-                            fontWeight: FontWeight.w900, fontSize: 14),
-                      ),
-                    ],
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.ink)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'File: $_timetableFile (${_subjects.length} subjects)',
+                  style:
+                      const TextStyle(fontSize: 13, color: AppColors.muted),
+                ),
+                AnimatedSize(
+                  duration: kMed,
+                  child: _isReadingTimetable
+                      ? const Padding(
+                          padding: EdgeInsets.only(top: 12),
+                          child: LinearProgressIndicator(),
+                        )
+                      : const SizedBox(width: double.infinity),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: PressScale(
+                    child: FilledButton.icon(
+                      onPressed:
+                          _isReadingTimetable ? null : _pickAndReadTimetablePdf,
+                      icon: const Icon(Icons.upload_file_rounded),
+                      label: Text(_isReadingTimetable
+                          ? 'Reading file...'
+                          : 'Upload PDF or image'),
+                    ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    CloudBackupService.user == null
-                        ? 'Not signed in. Cloud backup is off.'
-                        : 'Last Synced: $_lastBackup • ${CloudBackupService.user?.email ?? _userEmail}',
-                    style: const TextStyle(fontSize: 12, color: Colors.black54),
-                  ),
-                  const SizedBox(height: 12),
-                  if (CloudBackupService.user == null) ...[
-                    SizedBox(
-                      width: double.infinity,
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        FadeSlideIn(
+          index: 2,
+          child: SoftCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      signedIn
+                          ? Icons.cloud_done_rounded
+                          : Icons.cloud_off_rounded,
+                      color: signedIn ? AppColors.good : AppColors.muted,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text('Cloud backup',
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.ink)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  !signedIn
+                      ? 'Not signed in. Cloud backup is off.'
+                      : 'Last synced: $_lastBackup • ${CloudBackupService.user?.email ?? _userEmail}',
+                  style:
+                      const TextStyle(fontSize: 13, color: AppColors.muted),
+                ),
+                const SizedBox(height: 12),
+                if (!signedIn) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: PressScale(
                       child: FilledButton.icon(
                         onPressed: _signInForBackup,
                         icon: const Icon(Icons.login_rounded),
                         label: const Text('Sign in with Google'),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                  ],
-                  SizedBox(
-                    width: double.infinity,
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                SizedBox(
+                  width: double.infinity,
+                  child: PressScale(
                     child: OutlinedButton.icon(
                       onPressed: () => _saveAllData(showSnack: true),
                       icon: const Icon(Icons.sync_rounded),
-                      label: const Text('Backup Attendance to Cloud Now'),
+                      label: const Text('Back up now'),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -2410,12 +2309,15 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label,
-            style: const TextStyle(fontSize: 12, color: Colors.black54)),
+            style: const TextStyle(fontSize: 13, color: AppColors.muted)),
         Flexible(
           child: Text(
             val,
             textAlign: TextAlign.right,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.ink),
           ),
         ),
       ],
