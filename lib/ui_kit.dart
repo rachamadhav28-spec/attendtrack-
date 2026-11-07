@@ -5,13 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class AppColors {
-  static const Color primary = Color(0xFF0A8A5F);
-  static const Color primarySoft = Color(0xFF2FBF8A);
+  static const Color primary = Color(0xFF0E9F6E);
+  static const Color primarySoft = Color(0xFF3DDC97);
   static const Color navy = Color(0xFF083D2C);
   static const Color ink = Color(0xFF0E2A20);
   static const Color muted = Color(0xFF4C6B5E);
-  static const Color bg = Color(0xFFF2FBF6);
-  static const Color tint = Color(0xFFDDF5E9);
+  static const Color bg = Color(0xFFF1FCF6);
+  static const Color tint = Color(0xFFE0F8EC);
   static const Color line = Color(0xFFD9EBE1);
   static const Color good = Color(0xFF0A6B47);
   static const Color goodSoft = Color(0xFFE3F5EA);
@@ -99,7 +99,13 @@ class AppTheme {
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        surfaceTintColor: Colors.transparent,
+        titleTextStyle: const TextStyle(
+            color: AppColors.ink, fontSize: 18, fontWeight: FontWeight.w700),
+        contentTextStyle:
+            const TextStyle(color: AppColors.muted, fontSize: 14),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,

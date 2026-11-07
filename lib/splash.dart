@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'ui_kit.dart';
 
-const Color _kMint = Color(0xFF12A56F);
+const Color _kMint = Color(0xFF16B77C);
 const Color _kBadge = Color(0xFF0A6B47);
 
 class SplashScreen extends StatefulWidget {
@@ -121,7 +121,7 @@ class _LogoPainter extends CustomPainter {
     RRect rr(double x, double y, double w, double h, double r) =>
         RRect.fromRectAndRadius(Rect.fromLTWH(x, y, w, h), Radius.circular(r));
     canvas.drawRRect(rr(0, 0, 200, 200, 46), fill..color = Colors.white);
-    canvas.drawRRect(rr(44, 52, 112, 104, 16), fill..color = const Color(0xFFDDF5E9));
+    canvas.drawRRect(rr(44, 52, 112, 104, 16), fill..color = const Color(0xFFE0F8EC));
     canvas.drawRRect(
         RRect.fromRectAndCorners(const Rect.fromLTWH(44, 52, 112, 30),
             topLeft: const Radius.circular(16),

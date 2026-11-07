@@ -1026,8 +1026,8 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: const Text(
-            'Verify & Edit Timetable Subjects',
-            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+            'Check your timetable',
+            
           ),
           content: SizedBox(
             width: double.maxFinite,
@@ -1036,8 +1036,8 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
-                    'Fix any subject name or tap the days it occurs on before saving:',
-                    style: TextStyle(fontSize: 12, color: Colors.black54),
+                    'Fix any name and tap the days each class happens, then save.',
+                    style: TextStyle(fontSize: 13, color: AppColors.muted),
                   ),
                   const SizedBox(height: 12),
                   ...List.generate(ctrls.length, (idx) {
@@ -1045,9 +1045,9 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                       margin: const EdgeInsets.only(bottom: 10),
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
+                        color: AppColors.bg,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.black12),
+                        border: Border.all(color: AppColors.line),
                       ),
                       child: Column(
                         children: [
@@ -1071,7 +1071,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                                   });
                                 },
                                 icon: const Icon(Icons.delete_outline,
-                                    color: Colors.red),
+                                    color: AppColors.bad),
                               ),
                             ],
                           ),
@@ -1177,8 +1177,8 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: const Text(
-            'Edit Subject, Time & Classes Done',
-            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+            'Edit subject',
+            
           ),
           content: SingleChildScrollView(
             child: Column(
@@ -1193,7 +1193,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 TextField(
                   controller: slotCtrl,
                   decoration: const InputDecoration(
-                    labelText: 'Class Timing (e.g. 09:30 AM - 10:30 AM)',
+                    labelText: 'Class time, e.g. 09:30 AM - 10:30 AM',
                     prefixIcon: Icon(Icons.access_time_rounded),
                   ),
                 ),
@@ -1205,7 +1205,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                         controller: attCtrl,
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(
-                          labelText: 'Classes Attended',
+                          labelText: 'Attended',
                         ),
                       ),
                     ),
@@ -1215,7 +1215,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                         controller: totCtrl,
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(
-                          labelText: 'Total Classes Done',
+                          labelText: 'Total classes',
                         ),
                       ),
                     ),
@@ -1223,8 +1223,11 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 ),
                 const SizedBox(height: 14),
                 const Text(
-                  'Scheduled Days:',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  'Class days',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: AppColors.ink),
                 ),
                 const SizedBox(height: 6),
                 Wrap(
@@ -1256,7 +1259,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 _saveAllData();
                 Navigator.pop(ctx);
               },
-              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+              child: const Text('Delete', style: TextStyle(color: AppColors.bad)),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx),
@@ -1283,7 +1286,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 _saveAllData(showSnack: true);
                 Navigator.pop(ctx);
               },
-              child: const Text('Save Changes'),
+              child: const Text('Save'),
             ),
           ],
         ),
