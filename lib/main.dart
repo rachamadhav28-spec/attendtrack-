@@ -1738,7 +1738,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
         ),
         const SizedBox(height: 8),
         if (visibleSubjects.isEmpty)
-          const FadeSlideIn(
+          FadeSlideIn(
             child: SoftCard(
               child: Center(
                 child: Text(
@@ -1746,7 +1746,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                       ? 'No subjects yet. Tap Add subject, or import a timetable from the Profile tab.'
                       : 'No classes on this day.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13, color: AppColors.muted),
+                  style: const TextStyle(fontSize: 13, color: AppColors.muted),
                 ),
               ),
             ),
