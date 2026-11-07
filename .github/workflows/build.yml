@@ -26,7 +26,7 @@ jobs:
 
       - name: Generate Android Platform Files
         run: |
-          flutter create --org com.madhav.attendtrack --project-name attendtrack .
+          flutter create --org com.madhav --project-name attendtrack .
 
       - name: Move Root google-services.json & Set Android SDK versions
         run: |
@@ -35,8 +35,47 @@ jobs:
           else
             echo "WARNING: google-services.json not found in root!"
           fi
-          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 23/g' android/app/build.gradle || true
-          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 23/g' android/app/build.gradle || true
+          for f in android/app/build.gradle android/app/build.gradle.kts; do
+            [ -f "$f" ] && sed -i -e 's/minSdk = flutter.minSdkVersion/minSdk = 23/g' -e 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 23/g' "$f"
+          done
+          true
+
+      - name: Android permissions, Firebase plugin and signing key
+        run: |
+          # Same signing key every build so Google Sign-In SHA-1 stays valid
+          mkdir -p ~/.android
+          if [ -f debug.keystore ]; then cp debug.keystore ~/.android/debug.keystore; fi
+          python3 - <<'PY'
+          import glob, re
+          # 1) Camera + internet permissions (flutter create leaves them out of release)
+          m = 'android/app/src/main/AndroidManifest.xml'
+          t = open(m).read()
+          perms = ('<uses-permission android:name="android.permission.INTERNET"/>\n'
+                   '    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>\n'
+                   '    <uses-permission android:name="android.permission.CAMERA"/>\n'
+                   '    <uses-feature android:name="android.hardware.camera" android:required="false"/>\n'
+                   '    <application')
+          if 'android.permission.CAMERA' not in t:
+              t = t.replace('<application', perms, 1)
+          open(m, 'w').write(t)
+          # 2) Apply the Google services (Firebase) Gradle plugin
+          for f in glob.glob('android/settings.gradle*'):
+              t = open(f).read()
+              if 'google-services' not in t:
+                  t = re.sub(r'(^[^\n]*com\.android\.application[^\n]*$)',
+                             r'\1\n    id("com.google.gms.google-services") version "4.4.2" apply false',
+                             t, count=1, flags=re.M)
+                  open(f, 'w').write(t)
+          for f in glob.glob('android/app/build.gradle*'):
+              t = open(f).read()
+              if 'google-services' not in t:
+                  t = re.sub(r'(^[^\n]*com\.android\.application[^\n]*$)',
+                             r'\1\n    id("com.google.gms.google-services")',
+                             t, count=1, flags=re.M)
+                  open(f, 'w').write(t)
+          PY
+          grep -n "google-services" android/settings.gradle* android/app/build.gradle*
+          grep -n "permission" android/app/src/main/AndroidManifest.xml
 
       - name: Force compileSdk 36 for all Android modules
         run: |

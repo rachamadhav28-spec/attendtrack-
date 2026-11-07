@@ -1,13 +1,16 @@
 import 'dart:convert';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+import 'package:qr/qr.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -231,8 +234,25 @@ class AttendanceLogItem {
 }
 
 class CloudBackupService {
-  static String _docKey(String email) =>
-      email.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_');
+  static User? get user {
+    try {
+      return FirebaseAuth.instance.currentUser;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Google sign-in. Same Google account = same uid after reinstall.
+  static Future<User?> signInWithGoogle() async {
+    try {
+      final cred =
+          await FirebaseAuth.instance.signInWithProvider(GoogleAuthProvider());
+      return cred.user;
+    } catch (e) {
+      debugPrint('Google sign-in error: $e');
+      return null;
+    }
+  }
 
   static Future<bool> syncUserToFirestore({
     required String email,
@@ -244,13 +264,14 @@ class CloudBackupService {
     required List<String> holidays,
     required List<AttendanceLogItem> historyLogs,
   }) async {
-    if (email.trim().isEmpty) return false;
+    final u = user;
+    if (u == null) return false;
     try {
       await FirebaseFirestore.instance
           .collection('student_backups')
-          .doc(_docKey(email))
+          .doc(u.uid)
           .set({
-        'email': email.trim().toLowerCase(),
+        'email': (u.email ?? email).trim().toLowerCase(),
         'userName': userName,
         'course': course,
         'year': year,
@@ -267,13 +288,13 @@ class CloudBackupService {
     }
   }
 
-  static Future<Map<String, dynamic>?> restoreUserFromFirestore(
-      String email) async {
-    if (email.trim().isEmpty) return null;
+  static Future<Map<String, dynamic>?> restoreUserFromFirestore() async {
+    final u = user;
+    if (u == null) return null;
     try {
       final doc = await FirebaseFirestore.instance
           .collection('student_backups')
-          .doc(_docKey(email))
+          .doc(u.uid)
           .get();
       if (doc.exists && doc.data() != null) {
         return doc.data()!;
@@ -322,7 +343,7 @@ class _RootFlowControllerState extends State<RootFlowController> {
         onCompletedOpenProfile: () {
           setState(() {
             _isOnboarded = true;
-            _initialDashboardTab = 4;
+            _initialDashboardTab = 3;
           });
         },
       );
@@ -381,24 +402,29 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
   }
 
   Future<void> _handleRestoreFromCloud() async {
-    final email = _emailCtrl.text.trim();
-    if (email.isEmpty) {
+    setState(() => _isRestoring = true);
+    final account = await CloudBackupService.signInWithGoogle();
+    if (account == null) {
+      if (!mounted) return;
+      setState(() => _isRestoring = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Enter your Gmail above to restore your cloud backup!'),
+          content: Text('Google sign-in failed. Check internet and try again.'),
         ),
       );
       return;
     }
-    setState(() => _isRestoring = true);
-    final data = await CloudBackupService.restoreUserFromFirestore(email);
+    final email = account.email ?? '';
+    _emailCtrl.text = email;
+    final data = await CloudBackupService.restoreUserFromFirestore();
+    if (!mounted) return;
     setState(() => _isRestoring = false);
 
     if (data == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No cloud backup found for this Gmail yet.'),
+          content: Text('No cloud backup found for this Google account yet.'),
         ),
       );
       return;
@@ -649,7 +675,7 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      'Enter your Gmail in box #4 above and tap below to restore all your subjects and attendance hours from Firebase:',
+                      'Sign in with the Google account you used before to restore all your subjects and attendance hours:',
                       style: TextStyle(fontSize: 11, color: Colors.black54),
                     ),
                     const SizedBox(height: 10),
@@ -660,8 +686,8 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
                             _isRestoring ? null : _handleRestoreFromCloud,
                         child: Text(
                           _isRestoring
-                              ? 'Restoring from Firebase...'
-                              : 'Restore My Cloud Backup',
+                              ? 'Restoring...'
+                              : 'Sign in with Google & Restore',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -793,7 +819,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
 
     setState(() => _lastBackup = nowStr);
 
-    await CloudBackupService.syncUserToFirestore(
+    final cloudOk = await CloudBackupService.syncUserToFirestore(
       email: _userEmail,
       userName: _userName,
       course: _course,
@@ -806,7 +832,11 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
 
     if (showSnack && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Backed up to Firebase ($_userEmail)!')),
+        SnackBar(
+          content: Text(cloudOk
+              ? 'Backed up to cloud ($_userEmail)!'
+              : 'Saved on phone. Sign in with Google in Profile to back up to cloud.'),
+        ),
       );
     }
   }
@@ -1278,18 +1308,46 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     );
   }
 
+  int _qrHash(String v) {
+    var h = 0x811c9dc5;
+    for (final u in v.codeUnits) {
+      h ^= u;
+      h = (h * 0x01000193) & 0xFFFFFFFF;
+    }
+    return h;
+  }
+
+  Future<void> _signInForBackup() async {
+    final u = await CloudBackupService.signInWithGoogle();
+    if (!mounted) return;
+    if (u == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Google sign-in failed. Check internet and try again.')),
+      );
+      return;
+    }
+    setState(() => _userEmail = u.email ?? _userEmail);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_email', _userEmail);
+    await _saveAllData(showSnack: true);
+  }
+
   String _generateQrSharePayload() {
     final rows = _subjects
         .map((s) =>
             '${s.name.replaceAll(RegExp(r'[|;~]'), ' ')}~${s.days.join(',')}~${s.scheduleSlot.replaceAll(RegExp(r'[|;~]'), ' ')}')
         .join(';');
     final compact = 'AT2|$_course|$_year|College|$rows';
-    return base64Encode(utf8.encode(compact));
+    return compact;
   }
 
   void _importQrPayload(String rawCode) {
     try {
-      final decodedStr = utf8.decode(base64Decode(rawCode.trim()));
+      final trimmed = rawCode.trim();
+      final decodedStr = trimmed.startsWith('AT2|')
+          ? trimmed
+          : utf8.decode(base64Decode(trimmed));
       if (decodedStr.startsWith('AT2|')) {
         final parts = decodedStr.split('|');
         if (parts.length >= 5) {
@@ -1355,19 +1413,40 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
   }
 
   void _openLiveCameraQrScanner() {
+    final controller = MobileScannerController(
+      facing: CameraFacing.back,
+      detectionSpeed: DetectionSpeed.noDuplicates,
+    );
+    bool handled = false;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      enableDrag: false,
       backgroundColor: Colors.black,
       builder: (ctx) => SizedBox(
         height: MediaQuery.of(ctx).size.height * 0.75,
         child: Stack(
           children: [
             MobileScanner(
+              controller: controller,
+              errorBuilder: (context, error, child) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    error.errorCode == MobileScannerErrorCode.permissionDenied
+                        ? 'Camera permission denied.\nAllow Camera for this app in phone Settings, then try again.'
+                        : 'Camera could not start (${error.errorCode.name}).',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+              ),
               onDetect: (capture) {
+                if (handled) return;
                 for (final barcode in capture.barcodes) {
                   final raw = barcode.rawValue;
                   if (raw != null && raw.isNotEmpty) {
+                    handled = true;
                     Navigator.pop(ctx);
                     _importQrPayload(raw);
                     break;
@@ -1400,7 +1479,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
           ],
         ),
       ),
-    );
+    ).whenComplete(controller.dispose);
   }
 
   @override
@@ -1416,7 +1495,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
             _buildHomeTab(),
             _buildHistoryTab(),
             _buildQrAndStatsTab(),
-            _buildHelpTab(),
             _buildProfileAndTimetableTab(),
           ][_currentTab],
         ),
@@ -1430,8 +1508,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
               icon: Icon(Icons.calendar_month_rounded), label: 'History'),
           NavigationDestination(
               icon: Icon(Icons.qr_code_scanner_rounded), label: 'QR Scan'),
-          NavigationDestination(
-              icon: Icon(Icons.help_outline_rounded), label: 'Help'),
           NavigationDestination(
               icon: Icon(Icons.person_rounded), label: 'Profile & PDF'),
         ],
@@ -1499,7 +1575,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                     ),
                   ),
                   IconButton(
-                    onPressed: () => setState(() => _currentTab = 4),
+                    onPressed: () => setState(() => _currentTab = 3),
                     icon: const Icon(Icons.upload_file_rounded,
                         color: Colors.white),
                     tooltip: 'Upload Timetable PDF',
@@ -2064,41 +2140,57 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                     style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
                   ),
                   const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          Color(0xFF1E1B4B),
-                          Color(0xFF3730A3),
-                          Color(0xFF2563EB)
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: QrImageView(
-                        data: qrPayload,
-                        version: QrVersions.auto,
-                        size: 190,
-                        eyeStyle: const QrEyeStyle(
-                          eyeShape: QrEyeShape.circle,
-                          color: Color(0xFF1E1B4B),
+                  Builder(builder: (_) {
+                    final h = _qrHash(qrPayload);
+                    final style = kQrStyles[(h ~/ 1000000) % kQrStyles.length];
+                    final code6 = (h % 1000000).toString().padLeft(6, '0');
+                    final qr = QrImage(QrCode.fromData(
+                      data: qrPayload,
+                      errorCorrectLevel: QrErrorCorrectLevel.M,
+                    ));
+                    return Column(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: SizedBox(
+                            width: 250,
+                            height: 250,
+                            child: CustomPaint(
+                              painter: StyledQrPainter(qr, style),
+                            ),
+                          ),
                         ),
-                        dataModuleStyle: const QrDataModuleStyle(
-                          dataModuleShape: QrDataModuleShape.circle,
-                          color: Color(0xFF1E1B4B),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Theme: ${style.name}',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w800, fontSize: 14),
                         ),
-                      ),
-                    ),
-                  ),
+                        const SizedBox(height: 2),
+                        Text(
+                          code6,
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 4,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          alignment: WrapAlignment.center,
+                          children: _subjects
+                              .map((sub) => Chip(
+                                    label: Text(sub.name,
+                                        style: const TextStyle(fontSize: 11)),
+                                    visualDensity: VisualDensity.compact,
+                                  ))
+                              .toList(),
+                        ),
+                      ],
+                    );
+                  }),
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
@@ -2114,66 +2206,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                     ),
                   ),
                 ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHelpTab() {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Student Help & 75% Guide',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Card(
-            color: Colors.white,
-            child: const ListTile(
-              leading:
-                  Icon(Icons.calendar_today_rounded, color: Color(0xFF3730A3)),
-              title: Text(
-                'Check Classes by Week Day (Mon–Sat)',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-              subtitle: Text(
-                'Use the Mon, Tue, Wed, Thu, Fri, Sat selector bar on the Home screen to see which classes happen on each day.',
-                style: TextStyle(fontSize: 12),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Card(
-            color: Colors.white,
-            child: const ListTile(
-              leading: Icon(Icons.edit_note_rounded, color: Color(0xFF3730A3)),
-              title: Text(
-                'Edit Subject Name & Classes Attended/Done',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-              subtitle: Text(
-                'Tap the pencil icon next to any subject on the Home screen to edit its name, days, attended hours, and total classes done.',
-                style: TextStyle(fontSize: 12),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Card(
-            color: Colors.white,
-            child: const ListTile(
-              leading:
-                  Icon(Icons.picture_as_pdf_rounded, color: Color(0xFF3730A3)),
-              title: Text(
-                'Verify Timetable PDF Before Saving (<3s)',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-              subtitle: Text(
-                'When you upload a Timetable PDF or image on the Profile tab, a verification popup opens in under 3 seconds and automatically merges duplicate subjects.',
-                style: TextStyle(fontSize: 12),
               ),
             ),
           ),
@@ -2339,10 +2371,23 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Last Synced: $_lastBackup • Linked to $_userEmail',
+                    CloudBackupService.user == null
+                        ? 'Not signed in. Cloud backup is off.'
+                        : 'Last Synced: $_lastBackup • ${CloudBackupService.user?.email ?? _userEmail}',
                     style: const TextStyle(fontSize: 12, color: Colors.black54),
                   ),
                   const SizedBox(height: 12),
+                  if (CloudBackupService.user == null) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: _signInForBackup,
+                        icon: const Icon(Icons.login_rounded),
+                        label: const Text('Sign in with Google'),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
@@ -2376,4 +2421,171 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       ],
     );
   }
+}
+
+
+class QrStyleSpec {
+  final String name;
+  final Color bg;
+  final List<Color> fg;
+  final bool grad;
+  final String shape;
+  final List<double> eye;
+  final Color? eyeColor;
+  final bool leafEyes;
+  const QrStyleSpec(this.name, this.bg, this.fg, this.shape, this.eye,
+      {this.grad = false, this.eyeColor, this.leafEyes = false});
+}
+
+const List<QrStyleSpec> kQrStyles = [
+  QrStyleSpec('Leaf', Color(0xFFF1F8EC), [Color(0xFF1F6B2E)], 'leaf',
+      [2.6, 1.6, 1.1],
+      leafEyes: true),
+  QrStyleSpec('Diamond', Color(0xFFF4F0FF),
+      [Color(0xFF311B92), Color(0xFF7C4DFF)], 'diamond', [1.2, 0.6, 0.4],
+      grad: true),
+  QrStyleSpec('Tall bars', Color(0xFFFFF7EC),
+      [Color(0xFFBF360C), Color(0xFFF57C00)], 'vpill', [2, 1.2, 0.9],
+      grad: true),
+  QrStyleSpec(
+      'Mosaic',
+      Color(0xFFFFFFFF),
+      [Color(0xFF0D47A1), Color(0xFFAD1457), Color(0xFF00695C), Color(0xFFE65100)],
+      'mosaic',
+      [0.8, 0.4, 0.3],
+      eyeColor: Color(0xFF0D1B4A)),
+  QrStyleSpec('Liquid', Color(0xFFEEF3FF),
+      [Color(0xFF0D1B4A), Color(0xFF1976D2)], 'liquid', [3, 2, 1.4],
+      grad: true),
+];
+
+class StyledQrPainter extends CustomPainter {
+  final QrImage qr;
+  final QrStyleSpec st;
+  StyledQrPainter(this.qr, this.st);
+
+  bool _isEye(int r, int c, int n) =>
+      (r < 7 && c < 7) || (r < 7 && c >= n - 7) || (r >= n - 7 && c < 7);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final n = qr.moduleCount;
+    const q = 3;
+    final s = size.width / (n + 2 * q);
+    canvas.drawRect(Offset.zero & size, Paint()..color = st.bg);
+
+    final paint = Paint()..isAntiAlias = true;
+    if (st.grad) {
+      paint.shader = ui.Gradient.linear(
+          Offset.zero, Offset(size.width, size.height), [st.fg[0], st.fg[1]]);
+    } else {
+      paint.color = st.fg[0];
+    }
+
+    bool dark(int r, int c) =>
+        r >= 0 && c >= 0 && r < n && c < n && qr.isDark(r, c) && !_isEye(r, c, n);
+
+    void rr(double x, double y, double w, double h, double tl, double tr,
+        double br, double bl, Paint p) {
+      canvas.drawRRect(
+        RRect.fromRectAndCorners(
+          Rect.fromLTWH(x, y, w, h),
+          topLeft: Radius.circular(tl),
+          topRight: Radius.circular(tr),
+          bottomRight: Radius.circular(br),
+          bottomLeft: Radius.circular(bl),
+        ),
+        p,
+      );
+    }
+
+    if (st.shape == 'vpill') {
+      final pad = s * 0.107;
+      final w = s - 2 * pad;
+      for (var k = 0; k < n; k++) {
+        var run = -1;
+        for (var r = 0; r <= n; r++) {
+          final on = dark(r, k);
+          if (on && run < 0) run = r;
+          if (!on && run >= 0) {
+            rr((k + q) * s + pad, (run + q) * s + pad, w, (r - run) * s - 2 * pad,
+                w / 2, w / 2, w / 2, w / 2, paint);
+            run = -1;
+          }
+        }
+      }
+    } else {
+      for (var r = 0; r < n; r++) {
+        for (var k = 0; k < n; k++) {
+          if (!dark(r, k)) continue;
+          final x = (k + q) * s;
+          final y = (r + q) * s;
+          final inset = s * 0.035;
+          if (st.shape == 'leaf') {
+            rr(x + inset, y + inset, s - 2 * inset, s - 2 * inset, s * .5, 0,
+                s * .5, 0, paint);
+          } else if (st.shape == 'diamond') {
+            final h = s * 0.6;
+            final cx = x + s / 2;
+            final cy = y + s / 2;
+            final path = Path()
+              ..moveTo(cx, cy - h)
+              ..lineTo(cx + h, cy)
+              ..lineTo(cx, cy + h)
+              ..lineTo(cx - h, cy)
+              ..close();
+            canvas.drawPath(path, paint);
+          } else if (st.shape == 'mosaic') {
+            final mp = Paint()
+              ..isAntiAlias = true
+              ..color = st.fg[(r * 5 + k * 3 + (r * k) % 2) % st.fg.length];
+            rr(x + inset, y + inset, s - 2 * inset, s - 2 * inset, s * .2,
+                s * .2, s * .2, s * .2, mp);
+          } else {
+            final rad = s * .5;
+            final tl = (!dark(r - 1, k) && !dark(r, k - 1)) ? rad : 0.0;
+            final tr = (!dark(r - 1, k) && !dark(r, k + 1)) ? rad : 0.0;
+            final br = (!dark(r + 1, k) && !dark(r, k + 1)) ? rad : 0.0;
+            final bl = (!dark(r + 1, k) && !dark(r, k - 1)) ? rad : 0.0;
+            rr(x - .02 * s, y - .02 * s, s * 1.04, s * 1.04, tl, tr, br, bl, paint);
+          }
+        }
+      }
+    }
+
+    final eyePaint = Paint()..isAntiAlias = true;
+    if (st.eyeColor != null) {
+      eyePaint.color = st.eyeColor!;
+    } else {
+      eyePaint.shader = paint.shader;
+      eyePaint.color = st.fg[0];
+    }
+    final bgPaint = Paint()
+      ..isAntiAlias = true
+      ..color = st.bg;
+    for (final p in [
+      [0, 0],
+      [0, n - 7],
+      [n - 7, 0]
+    ]) {
+      final x = (p[1] + q) * s;
+      final y = (p[0] + q) * s;
+      void box(double ox, double oy, double sz, double v, Paint pt) {
+        final r = v * s;
+        if (st.leafEyes) {
+          rr(x + ox * s, y + oy * s, sz * s, sz * s, r, 0, r, 0, pt);
+        } else {
+          rr(x + ox * s, y + oy * s, sz * s, sz * s, r, r, r, r, pt);
+        }
+      }
+
+      box(0, 0, 7, st.eye[0], eyePaint);
+      box(1, 1, 5, st.eye[1], bgPaint);
+      box(2, 2, 3, st.eye[2], eyePaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant StyledQrPainter old) =>
+      old.qr != qr || old.st != st;
 }
