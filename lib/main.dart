@@ -1402,8 +1402,17 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     final controller = MobileScannerController(
       facing: CameraFacing.back,
       detectionSpeed: DetectionSpeed.noDuplicates,
+      autoStart: false,
+      useNewCameraSelector: true,
     );
     bool handled = false;
+    // Start after the sheet has finished sliding in, so the camera
+    // does not race the animation (a common cause of genericError).
+    Future.delayed(const Duration(milliseconds: 450), () async {
+      try {
+        await controller.start();
+      } catch (_) {}
+    });
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1422,12 +1431,30 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
               errorBuilder: (context, error, child) => Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
-                  child: Text(
-                    error.errorCode == MobileScannerErrorCode.permissionDenied
-                        ? 'Camera permission denied.\nAllow Camera for this app in phone Settings, then try again.'
-                        : 'Camera could not start (${error.errorCode.name}).',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        error.errorCode ==
+                                MobileScannerErrorCode.permissionDenied
+                            ? 'Camera permission denied.\nAllow Camera for this app in phone Settings, then try again.'
+                            : 'Camera could not start (${error.errorCode.name}).\n${error.errorDetails?.message ?? ''}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      const SizedBox(height: 16),
+                      FilledButton(
+                        onPressed: () async {
+                          try {
+                            await controller.stop();
+                          } catch (_) {}
+                          try {
+                            await controller.start();
+                          } catch (_) {}
+                        },
+                        child: const Text('Try again'),
+                      ),
+                    ],
                   ),
                 ),
               ),

@@ -417,7 +417,10 @@ class AppNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppColors.navy,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: AppColors.line)),
+      ),
       child: SafeArea(
         top: false,
         child: SizedBox(
@@ -439,7 +442,7 @@ class AppNavBar extends StatelessWidget {
                           height: 32,
                           decoration: BoxDecoration(
                             color: selected
-                                ? AppColors.primarySoft
+                                ? AppColors.tint
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -447,8 +450,8 @@ class AppNavBar extends StatelessWidget {
                             _items[i].$1,
                             size: 24,
                             color: selected
-                                ? Colors.white
-                                : const Color(0xFFAEB9E3),
+                                ? AppColors.primary
+                                : AppColors.muted,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -459,8 +462,8 @@ class AppNavBar extends StatelessWidget {
                             fontWeight:
                                 selected ? FontWeight.w600 : FontWeight.w400,
                             color: selected
-                                ? Colors.white
-                                : const Color(0xFFAEB9E3),
+                                ? AppColors.primary
+                                : AppColors.muted,
                           ),
                           child: Text(_items[i].$2),
                         ),
