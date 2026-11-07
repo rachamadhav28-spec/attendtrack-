@@ -354,6 +354,7 @@ class InitialStudentSetupScreen extends StatefulWidget {
 class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
   final TextEditingController _nameCtrl = TextEditingController();
   final TextEditingController _emailCtrl = TextEditingController();
+  final TextEditingController _courseCtrl = TextEditingController();
   String _selectedCourse = 'B.Tech';
   String _selectedYear = '2nd Year';
   bool _isRestoring = false;
@@ -369,7 +370,13 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
     setState(() {
       _nameCtrl.text = prefs.getString('user_name') ?? '';
       _emailCtrl.text = prefs.getString('user_email') ?? '';
-      _selectedCourse = prefs.getString('course') ?? 'B.Tech';
+      final c = prefs.getString('course') ?? 'B.Tech';
+      if (c == 'B.Tech' || c == 'Degree') {
+        _selectedCourse = c;
+      } else {
+        _selectedCourse = 'Other';
+        _courseCtrl.text = c == 'Other' ? '' : c;
+      }
       _selectedYear = prefs.getString('year') ?? '2nd Year';
     });
   }
@@ -450,7 +457,11 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_name', name);
     await prefs.setString('user_email', email);
-    await prefs.setString('course', _selectedCourse);
+    await prefs.setString(
+        'course',
+        _selectedCourse == 'Other' && _courseCtrl.text.trim().isNotEmpty
+            ? _courseCtrl.text.trim()
+            : _selectedCourse);
     await prefs.setString('year', _selectedYear);
 
     if ((prefs.getString('subjects') ?? '').isEmpty) {
@@ -563,6 +574,23 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
                 );
               }).toList(),
             ),
+          ),
+          AnimatedSize(
+            duration: kMed,
+            curve: Curves.easeOutCubic,
+            child: _selectedCourse == 'Other'
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: TextField(
+                      controller: _courseCtrl,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: const InputDecoration(
+                        hintText: 'Type your course, e.g. MBA, Diploma',
+                        prefixIcon: Icon(Icons.school_outlined),
+                      ),
+                    ),
+                  )
+                : const SizedBox(width: double.infinity),
           ),
           const SizedBox(height: 16),
           FadeSlideIn(index: 4, child: _fieldLabel('Year')),
