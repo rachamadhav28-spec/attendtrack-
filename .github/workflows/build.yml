@@ -101,10 +101,10 @@ jobs:
           fi
 
       - name: Build Release APK
-        run: flutter build apk --release
+        run: flutter build apk --release --no-shrink
 
       - name: Build Play Store AAB Bundle
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release --no-shrink
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4

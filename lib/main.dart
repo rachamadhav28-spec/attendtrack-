@@ -41,67 +41,13 @@ class AttendTrackApp extends StatelessWidget {
 
 class AttendanceAppLogo extends StatelessWidget {
   final double size;
-  final bool showLabel;
-  const AttendanceAppLogo({super.key, this.size = 76, this.showLabel = false});
+  const AttendanceAppLogo({super.key, this.size = 76});
 
   @override
-  Widget build(BuildContext context) {
-    final mark = Container(
+  Widget build(BuildContext context) => SizedBox(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(size * 0.27),
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Icon(Icons.calendar_month_rounded,
-              size: size * 0.52, color: AppColors.primary),
-          Positioned(
-            bottom: size * 0.1,
-            right: size * 0.1,
-            child: Container(
-              width: size * 0.34,
-              height: size * 0.34,
-              decoration: BoxDecoration(
-                color: AppColors.good,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
-              ),
-              child: Icon(Icons.check_rounded,
-                  color: Colors.white, size: size * 0.2),
-            ),
-          ),
-        ],
-      ),
-    );
-    final content = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        mark,
-        if (showLabel) ...[
-          const SizedBox(height: 8),
-          const Text(
-            'AttendTrack',
-            style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-                color: AppColors.ink),
-          ),
-        ],
-      ],
-    );
-    if (reduceMotion(context)) return content;
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.9, end: 1.0),
-      duration: const Duration(milliseconds: 260),
-      curve: Curves.easeOutBack,
-      builder: (context, scale, child) =>
-          Transform.scale(scale: scale, child: child),
-      child: content,
-    );
-  }
+      child: CustomPaint(painter: LogoPainter(1, 1)));
 }
 
 class SubjectModel {

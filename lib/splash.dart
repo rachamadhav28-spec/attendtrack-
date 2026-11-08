@@ -76,7 +76,7 @@ class _SplashScreenState extends State<SplashScreen>
                       height: 168,
                       child: CustomPaint(
                           painter:
-                              _LogoPainter(badge.value, tick.value)),
+                              LogoPainter(badge.value, tick.value)),
                     ),
                   ),
                 ),
@@ -107,10 +107,10 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-class _LogoPainter extends CustomPainter {
+class LogoPainter extends CustomPainter {
   final double badge;
   final double tick;
-  _LogoPainter(this.badge, this.tick);
+  LogoPainter(this.badge, this.tick);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -165,5 +165,5 @@ class _LogoPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_LogoPainter o) => o.badge != badge || o.tick != tick;
+  bool shouldRepaint(LogoPainter o) => o.badge != badge || o.tick != tick;
 }
