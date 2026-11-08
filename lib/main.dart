@@ -1984,6 +1984,11 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     final dayLogs =
         _historyLogs.where((l) => l.dateKey == selectedKey).toList();
     final isHoliday = _holidays.contains(selectedKey);
+    final stateHolNames = {
+      for (final h in holidaysForState(_stateName))
+        DateFormat('yyyy-MM-dd').format(h.date): h.name
+    };
+    final stateHolName = stateHolNames[selectedKey];
     final presentCount = dayLogs.where((l) => l.present).length;
     final absentCount = dayLogs.length - presentCount;
 
@@ -2033,11 +2038,14 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
         FadeSlideIn(
           child: SoftCard(
             padding: EdgeInsets.zero,
-            child: CalendarDatePicker(
-              initialDate: _selectedCalendarDate,
-              firstDate: DateTime(2024),
-              lastDate: DateTime(2030),
-              onDateChanged: (dt) => setState(() => _selectedCalendarDate = dt),
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: HolidayCalendar(
+                selected: _selectedCalendarDate,
+                stateHolidays: stateHolNames.keys.toSet(),
+                myHolidays: _holidays.toSet(),
+                onSelect: (dt) => setState(() => _selectedCalendarDate = dt),
+              ),
             ),
           ),
         ),
@@ -2067,6 +2075,24 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 )
               : const SizedBox(width: double.infinity),
         ),
+        if (stateHolName != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: SoftCard(
+              color: AppColors.badSoft,
+              child: Row(
+                children: [
+                  const Icon(Icons.celebration_rounded, color: AppColors.bad),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(stateHolName,
+                        style: const TextStyle(
+                            fontSize: 14, color: AppColors.ink)),
+                  ),
+                ],
+              ),
+            ),
+          ),
         const SizedBox(height: 16),
         Row(
           children: [

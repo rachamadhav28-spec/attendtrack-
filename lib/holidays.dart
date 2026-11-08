@@ -278,3 +278,126 @@ Future<String?> pickState(BuildContext context, String current) {
     ),
   );
 }
+
+/// Month grid. A dot marks a state holiday; a tinted cell marks a day you
+/// marked as holiday yourself.
+class HolidayCalendar extends StatefulWidget {
+  final DateTime selected;
+  final Set<String> stateHolidays; // yyyy-MM-dd
+  final Set<String> myHolidays;
+  final ValueChanged<DateTime> onSelect;
+  const HolidayCalendar({
+    super.key,
+    required this.selected,
+    required this.stateHolidays,
+    required this.myHolidays,
+    required this.onSelect,
+  });
+
+  @override
+  State<HolidayCalendar> createState() => _HolidayCalendarState();
+}
+
+class _HolidayCalendarState extends State<HolidayCalendar> {
+  late DateTime _month =
+      DateTime(widget.selected.year, widget.selected.month);
+
+  static const _names = [
+    'January', 'February', 'March', 'April', 'May', 'June', 'July',
+    'August', 'September', 'October', 'November', 'December'
+  ];
+
+  String _key(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  @override
+  Widget build(BuildContext context) {
+    final first = DateTime(_month.year, _month.month);
+    final lead = first.weekday % 7; // Sunday first
+    final count = DateTime(_month.year, _month.month + 1, 0).day;
+    final cells = <Widget>[
+      for (final d in const ['S', 'M', 'T', 'W', 'T', 'F', 'S'])
+        Center(
+            child: Text(d,
+                style: const TextStyle(color: AppColors.muted, fontSize: 13))),
+      for (var i = 0; i < lead; i++) const SizedBox.shrink(),
+      for (var day = 1; day <= count; day++)
+        _cell(DateTime(_month.year, _month.month, day)),
+    ];
+    return Column(
+      children: [
+        Row(
+          children: [
+            IconButton(
+              onPressed: () => setState(
+                  () => _month = DateTime(_month.year, _month.month - 1)),
+              icon: const Icon(Icons.chevron_left_rounded),
+            ),
+            Expanded(
+              child: Center(
+                child: Text('${_names[_month.month - 1]} ${_month.year}',
+                    style: const TextStyle(
+                        color: AppColors.ink,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600)),
+              ),
+            ),
+            IconButton(
+              onPressed: () => setState(
+                  () => _month = DateTime(_month.year, _month.month + 1)),
+              icon: const Icon(Icons.chevron_right_rounded),
+            ),
+          ],
+        ),
+        GridView.count(
+          crossAxisCount: 7,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          childAspectRatio: 1.1,
+          children: cells,
+        ),
+      ],
+    );
+  }
+
+  Widget _cell(DateTime d) {
+    final k = _key(d);
+    final sel = _key(widget.selected) == k;
+    final state = widget.stateHolidays.contains(k);
+    final mine = widget.myHolidays.contains(k);
+    return GestureDetector(
+      onTap: () => widget.onSelect(d),
+      child: AnimatedContainer(
+        duration: kFast,
+        margin: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: sel
+              ? AppColors.primary
+              : (mine ? AppColors.tint : Colors.transparent),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('${d.day}',
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: sel ? FontWeight.w700 : FontWeight.w400,
+                    color: sel ? Colors.white : AppColors.ink)),
+            const SizedBox(height: 2),
+            Container(
+              width: 5,
+              height: 5,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: state
+                    ? (sel ? Colors.white : AppColors.bad)
+                    : Colors.transparent,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
