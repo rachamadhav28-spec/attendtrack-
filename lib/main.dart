@@ -14,6 +14,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'ui_kit.dart';
 
 Future<void> main() async {
@@ -878,8 +879,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     try {
       final res = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg', 'txt'],
-        withData: true,
+        allowedExtensions: ['png', 'jpg', 'jpeg'],
       );
       if (res == null || res.files.isEmpty) return;
 
@@ -889,79 +889,47 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
         _timetableFile = picked.name;
       });
 
-      await Future.delayed(const Duration(milliseconds: 180));
       List<SubjectModel> extracted = [];
-
-      if (picked.bytes != null) {
-        final rawText = utf8.decode(picked.bytes!, allowMalformed: true);
-        final lines = rawText
-            .split(RegExp(r'[\r\n]+'))
-            .map((s) => s.trim())
-            .where((s) =>
-                s.length >= 4 &&
-                s.length <= 42 &&
-                !s.startsWith('%PDF') &&
-                !s.contains('obj') &&
-                !s.contains('stream') &&
-                RegExp(r'^[A-Za-z][A-Za-z0-9\s&\-\(\)\.]+$').hasMatch(s))
-            .toSet()
-            .take(12)
-            .toList();
-
-        if (lines.length >= 3) {
-          extracted = lines
-              .asMap()
-              .entries
-              .map((e) => SubjectModel(
-                    name: e.value,
-                    scheduleSlot:
-                        '${9 + (e.key % 6)}:30 AM - ${10 + (e.key % 6)}:30 AM',
-                    days: e.key.isEven
-                        ? ['Mon', 'Wed', 'Fri']
-                        : ['Tue', 'Thu', 'Sat'],
-                  ))
-              .toList();
+      final path = picked.path;
+      if (path != null) {
+        final rec = TextRecognizer();
+        try {
+          final out = await rec.processImage(InputImage.fromFilePath(path));
+          final skip = RegExp(
+              r'^(mon|tue|wed|thu|fri|sat|sun|day|time|period|break|lunch|recess|lab|class|timetable)[a-z]*\.?$',
+              caseSensitive: false);
+          final timeRx = RegExp(
+              r'(\d{1,2}[:.]\d{2}\s*(?:am|pm)?\s*[-–to]+\s*\d{1,2}[:.]\d{2}\s*(?:am|pm)?)',
+              caseSensitive: false);
+          for (final block in out.blocks) {
+            for (final line in block.lines) {
+              final t = line.text.trim();
+              if (t.length < 3 || t.length > 40 || skip.hasMatch(t)) continue;
+              if (!RegExp(r'^[A-Za-z][A-Za-z0-9\s&\-\(\)\.]+$').hasMatch(t)) {
+                continue;
+              }
+              extracted.add(SubjectModel(
+                  name: t,
+                  scheduleSlot:
+                      timeRx.firstMatch(line.text)?.group(1) ?? '09:30 AM - 10:30 AM',
+                  days: []));
+            }
+          }
+        } catch (e) {
+          debugPrint('OCR error: $e');
+        } finally {
+          rec.close();
         }
       }
 
       if (extracted.isEmpty) {
-        extracted = _subjects.length >= 5
-            ? _subjects
-                .map((s) => SubjectModel(
-                      name: s.name,
-                      attendedHours: s.attendedHours,
-                      totalHours: s.totalHours,
-                      scheduleSlot: s.scheduleSlot,
-                      days: List<String>.from(s.days),
-                    ))
-                .toList()
-            : [
-                SubjectModel(
-                  name: 'Data Structures & Algorithms',
-                  scheduleSlot: '09:30 AM - 10:30 AM',
-                  days: ['Mon', 'Wed', 'Fri'],
-                ),
-                SubjectModel(
-                  name: 'Discrete Mathematics',
-                  scheduleSlot: '10:30 AM - 11:30 AM',
-                  days: ['Tue', 'Thu', 'Sat'],
-                ),
-                SubjectModel(
-                  name: 'Database Management Systems',
-                  scheduleSlot: '11:30 AM - 12:30 PM',
-                  days: ['Mon', 'Wed', 'Fri'],
-                ),
-                SubjectModel(
-                  name: 'Digital Logic Design',
-                  scheduleSlot: '01:30 PM - 02:30 PM',
-                  days: ['Tue', 'Thu', 'Sat'],
-                ),
-                SubjectModel(
-                  name: 'Python & DBMS Lab (3h)',
-                  scheduleSlot: '02:00 PM - 05:00 PM',
-                  days: ['Wed', 'Fri'],
-                ),
-              ];
+        setState(() => _isReadingTimetable = false);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                "Couldn't read subjects from that file. Use a clear photo or screenshot, or add subjects by hand."),
+            duration: Duration(seconds: 6)));
+        return;
       }
 
       final deduplicated = _deduplicateSubjects(extracted);
