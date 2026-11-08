@@ -78,6 +78,9 @@ class SubjectModel {
   int totalHours;
   String scheduleSlot;
   List<String> days;
+  Map<String, String> daySlots;
+
+  String slotFor(String day) => daySlots[day] ?? scheduleSlot;
 
   SubjectModel({
     required this.name,
@@ -85,7 +88,9 @@ class SubjectModel {
     this.totalHours = 0,
     this.scheduleSlot = '09:30 AM - 10:30 AM',
     List<String>? days,
-  }) : days = days ?? ['Mon', 'Wed', 'Fri'];
+    Map<String, String>? daySlots,
+  })  : days = days ?? ['Mon', 'Wed', 'Fri'],
+        daySlots = daySlots ?? {};
 
   double get percentage =>
       totalHours == 0 ? 100.0 : (attendedHours / totalHours) * 100.0;
@@ -107,6 +112,7 @@ class SubjectModel {
         'totalHours': totalHours,
         'scheduleSlot': scheduleSlot,
         'days': days,
+        'daySlots': daySlots,
       };
 
   factory SubjectModel.fromJson(Map<String, dynamic> json) => SubjectModel(
@@ -117,6 +123,9 @@ class SubjectModel {
         days: json['days'] != null
             ? List<String>.from(json['days'])
             : ['Mon', 'Wed', 'Fri'],
+        daySlots: json['daySlots'] != null
+            ? Map<String, String>.from(json['daySlots'])
+            : null,
       );
 }
 
@@ -213,6 +222,8 @@ class CloudBackupService {
         'course': course,
         'year': year,
         'state': (await SharedPreferences.getInstance()).getString('state') ?? '',
+        'holidayNames': (await SharedPreferences.getInstance()).getString('holiday_names') ?? '{}',
+        'hiddenHols': (await SharedPreferences.getInstance()).getStringList('hidden_hols') ?? <String>[],
         'timetableFileName': timetableFileName,
         'subjects': subjects.map((s) => s.toJson()).toList(),
         'holidays': holidays,
@@ -409,6 +420,9 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
     await prefs.setString('course', data['course'] ?? 'B.Tech');
     await prefs.setString('year', data['year'] ?? '2nd Year');
     await prefs.setString('state', data['state'] ?? '');
+    await prefs.setString('holiday_names', data['holidayNames'] ?? '{}');
+    await prefs.setStringList(
+        'hidden_hols', List<String>.from(data['hiddenHols'] ?? const []));
     await prefs.setString(
         'timetable_file', data['timetableFileName'] ?? 'Restored from Cloud');
     if (data['subjects'] != null) {
@@ -1201,6 +1215,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     final attCtrl = TextEditingController(text: sub.attendedHours.toString());
     final totCtrl = TextEditingController(text: sub.totalHours.toString());
     final List<String> selectedDays = List<String>.from(sub.days);
+    final Map<String, String> daySlots = Map<String, String>.from(sub.daySlots);
 
     showModalBottomSheet(
       context: context,
@@ -1339,6 +1354,43 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                     );
                   }).toList(),
                 ),
+                if (selectedDays.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Text('Time on each day',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                          color: AppColors.ink)),
+                  for (final d in _weekDays.where(selectedDays.contains))
+                    Row(children: [
+                      SizedBox(
+                          width: 44,
+                          child: Text(d,
+                              style: TextStyle(color: AppColors.muted))),
+                      Expanded(
+                        child: DropdownButton<String>(
+                          isExpanded: true,
+                          value: () {
+                            final cur = daySlots[d] ??
+                                (selectedSlot == '__custom__'
+                                    ? customCtrl.text.trim()
+                                    : selectedSlot);
+                            return kTimeSlots.contains(cur) ? cur : null;
+                          }(),
+                          hint: const Text('Same as above'),
+                          items: [
+                            for (final t in kTimeSlots)
+                              DropdownMenuItem(
+                                  value: t,
+                                  child: Text(t,
+                                      style: const TextStyle(fontSize: 13)))
+                          ],
+                          onChanged: (v) =>
+                              setDialogState(() => daySlots[d] = v!),
+                        ),
+                      ),
+                    ]),
+                ],
               ],
             ),
           ),
@@ -1369,6 +1421,10 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                               ? kTimeSlots.first
                               : customCtrl.text.trim())
                           : selectedSlot;
+                  _subjects[subIndex].daySlots = {
+                    for (final e in daySlots.entries)
+                      if (selectedDays.contains(e.key)) e.key: e.value
+                  };
                   _subjects[subIndex].attendedHours = att < 0 ? 0 : att;
                   _subjects[subIndex].totalHours = tot < att ? att : tot;
                   _subjects[subIndex].days = selectedDays.isEmpty
@@ -1873,7 +1929,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${sub.scheduleSlot} • ${sub.days.join(", ")}',
+                          '${_activeWeekdayShort == 'All' ? sub.scheduleSlot : sub.slotFor(_activeWeekdayShort)} • ${sub.days.join(", ")}',
                           style: TextStyle(
                               fontSize: 13, color: AppColors.muted),
                         ),
@@ -2229,6 +2285,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     await prefs.setStringList('holidays', _holidays.toList());
     await prefs.setString('holiday_names', jsonEncode(_holidayNames));
     await prefs.setStringList('hidden_hols', _hiddenHols.toList());
+    _saveAllData();
   }
 
   void _undoSnack(String text, VoidCallback undo) {
