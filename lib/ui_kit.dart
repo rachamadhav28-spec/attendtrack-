@@ -1,6 +1,7 @@
 // Shared look for AttendTrack: "Premium and bold" (blue).
 // Colors, theme, and small animation helpers (all under 300 ms).
 
+import 'dart:math' as _math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -462,13 +463,13 @@ class AppNavBar extends StatelessWidget {
   final ValueChanged<int> onTap;
   const AppNavBar({super.key, required this.index, required this.onTap});
 
-  static const _items = [
-    (Icons.home_rounded, 'Home'),
-    (Icons.calendar_month_rounded, 'History'),
-    (Icons.celebration_rounded, 'Holidays'),
-    (Icons.qr_code_2_rounded, 'QR'),
-    (Icons.person_rounded, 'Profile'),
+  static const _icons = [
+    Icons.home_rounded,
+    Icons.calendar_month_rounded,
+    Icons.qr_code_2_rounded,
+    Icons.person_rounded,
   ];
+  static const _labels = ['Home', 'History', 'Holidays', 'QR', 'Profile'];
 
   @override
   Widget build(BuildContext context) {
@@ -482,8 +483,20 @@ class AppNavBar extends StatelessWidget {
         child: SizedBox(
           height: 72,
           child: Row(
-            children: List.generate(_items.length, (i) {
+            children: List.generate(_labels.length, (i) {
               final selected = i == index;
+              final color = selected ? AppColors.primary : AppColors.muted;
+              Widget iconWidget;
+              if (i == 2) {
+                // Beach holiday icon
+                iconWidget = CustomPaint(
+                  size: const Size(24, 24),
+                  painter: _BeachIconPainter(color: color),
+                );
+              } else {
+                final iconIdx = i < 2 ? i : i - 1;
+                iconWidget = Icon(_icons[iconIdx], size: 24, color: color);
+              }
               return Expanded(
                 child: PressScale(
                   child: InkWell(
@@ -502,13 +515,7 @@ class AppNavBar extends StatelessWidget {
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          child: Icon(
-                            _items[i].$1,
-                            size: 24,
-                            color: selected
-                                ? AppColors.primary
-                                : AppColors.muted,
-                          ),
+                          child: Center(child: iconWidget),
                         ),
                         const SizedBox(height: 2),
                         AnimatedDefaultTextStyle(
@@ -521,7 +528,7 @@ class AppNavBar extends StatelessWidget {
                                 ? AppColors.primary
                                 : AppColors.muted,
                           ),
-                          child: Text(_items[i].$2),
+                          child: Text(_labels[i]),
                         ),
                       ],
                     ),
@@ -534,6 +541,87 @@ class AppNavBar extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Beach scene icon painter for the Holidays tab.
+class _BeachIconPainter extends CustomPainter {
+  final Color color;
+  const _BeachIconPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    final w = size.width;
+    final h = size.height;
+
+    // Sun (top-right): circle + 8 short rays
+    final sunCx = w * 0.75, sunCy = h * 0.22, sunR = w * 0.13;
+    canvas.drawCircle(Offset(sunCx, sunCy), sunR, p);
+    final rayP = Paint()
+      ..color = color
+      ..strokeWidth = w * 0.07
+      ..strokeCap = StrokeCap.round;
+    for (int r = 0; r < 8; r++) {
+      final angle = r * 3.14159 / 4;
+      final inner = sunR + w * 0.06;
+      final outer = sunR + w * 0.14;
+      canvas.drawLine(
+        Offset(sunCx + inner * cos(angle), sunCy + inner * sin(angle)),
+        Offset(sunCx + outer * cos(angle), sunCy + outer * sin(angle)),
+        rayP,
+      );
+    }
+
+    // Umbrella pole: thin vertical line
+    final polePaint = Paint()
+      ..color = color
+      ..strokeWidth = w * 0.08
+      ..strokeCap = StrokeCap.round;
+    final poleX = w * 0.30;
+    canvas.drawLine(Offset(poleX, h * 0.28), Offset(poleX, h * 0.80), polePaint);
+
+    // Umbrella canopy: filled arc (half-ellipse)
+    final umbrellaRect = Rect.fromCenter(
+      center: Offset(poleX, h * 0.30),
+      width: w * 0.56,
+      height: h * 0.38,
+    );
+    final path = Path()
+      ..moveTo(poleX - w * 0.28, h * 0.30)
+      ..arcTo(umbrellaRect, 3.14159, 3.14159, false)
+      ..close();
+    canvas.drawPath(path, p);
+
+    // Lounge chair frame: two parallel lines (backrest + seat)
+    final chairPaint = Paint()
+      ..color = color
+      ..strokeWidth = w * 0.09
+      ..strokeCap = StrokeCap.round;
+    // seat bar
+    canvas.drawLine(Offset(w * 0.10, h * 0.80), Offset(w * 0.90, h * 0.75), chairPaint);
+    // backrest bar (angled up)
+    canvas.drawLine(Offset(w * 0.10, h * 0.80), Offset(w * 0.35, h * 0.60), chairPaint);
+    // two legs
+    canvas.drawLine(Offset(w * 0.20, h * 0.80), Offset(w * 0.18, h * 0.95), chairPaint);
+    canvas.drawLine(Offset(w * 0.78, h * 0.75), Offset(w * 0.76, h * 0.95), chairPaint);
+  }
+
+  @override
+  bool shouldRepaint(_BeachIconPainter old) => old.color != color;
+}
+
+double cos(double a) => _mathCos(a);
+double sin(double a) => _mathSin(a);
+double _mathCos(double a) {
+  // Dart's dart:math is imported in this file already
+  import 'dart:math' as math;
+  return math.cos(a);
+}
+double _mathSin(double a) {
+  import 'dart:math' as math;
+  return math.sin(a);
 }
 
 /// Blue top area with a rounded sheet over it. Scrolls as one page.
