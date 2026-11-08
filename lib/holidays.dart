@@ -170,6 +170,31 @@ const List<(String, String, String)> kHolidayRows = [
   ('2027-12-26', 'Boxing Day', 'ML MZ NL TS'),
 ];
 
+/// Central Government gazetted holidays: apply to every state.
+const List<(String, String)> kCentralRows = [
+  ('2026-11-08', 'Diwali / Deepavali'),
+  ('2026-11-24', 'Guru Nanak Jayanti'),
+  ('2026-12-25', 'Christmas Day'),
+  ('2027-01-26', 'Republic Day'),
+  ('2027-03-10', 'Id-ul-Fitr (tentative)'),
+  ('2027-03-22', 'Holi'),
+  ('2027-03-23', 'Holi'),
+  ('2027-03-26', 'Good Friday'),
+  ('2027-04-15', 'Rama Navami'),
+  ('2027-04-19', 'Mahavir Jayanti'),
+  ('2027-05-17', 'Bakrid / Id-ul-Zuha (tentative)'),
+  ('2027-05-20', 'Buddha Purnima'),
+  ('2027-06-16', 'Muharram (tentative)'),
+  ('2027-08-15', 'Independence Day'),
+  ('2027-08-15', 'Milad-un-Nabi (tentative)'),
+  ('2027-08-25', 'Janmashtami'),
+  ('2027-10-02', 'Mahatma Gandhi Jayanti'),
+  ('2027-10-09', 'Dussehra (Vijaya Dashami)'),
+  ('2027-10-29', 'Diwali / Deepavali'),
+  ('2027-11-14', 'Guru Nanak Jayanti'),
+  ('2027-12-25', 'Christmas Day'),
+];
+
 const Map<String, String> kStates = {
   'Andaman & Nicobar Islands': 'AN',
   'Andhra Pradesh': 'AP',
@@ -218,12 +243,18 @@ class Holiday {
 /// Holidays for a state name (all-India ones included), soonest first.
 List<Holiday> holidaysForState(String stateName) {
   final code = kStates[stateName];
-  final out = <Holiday>[];
+  final out = <Holiday>[
+    for (final c in kCentralRows) Holiday(DateTime.parse(c.$1), c.$2)
+  ];
+  String first(String n) => n.toLowerCase().split(RegExp(r'[^a-z]+')).first;
   for (final r in kHolidayRows) {
     final all = r.$3 == 'ALL';
-    if (all || (code != null && r.$3.split(' ').contains(code))) {
-      out.add(Holiday(DateTime.parse(r.$1), r.$2));
-    }
+    if (!all && !(code != null && r.$3.split(' ').contains(code))) continue;
+    // Already covered by the central list on that date (same festival)?
+    final dup = kCentralRows.any((c) =>
+        c.$1 == r.$1 &&
+        (first(c.$2) == first(r.$2) || all));
+    if (!dup) out.add(Holiday(DateTime.parse(r.$1), r.$2));
   }
   out.sort((a, b) => a.date.compareTo(b.date));
   return out;
