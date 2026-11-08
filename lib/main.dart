@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'splash.dart';
 import 'holidays.dart';
+import 'timetable_reader.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
@@ -933,6 +934,17 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       List<SubjectModel> extracted = [];
       final path = picked.path;
       if (path != null) {
+        try {
+          final grid = await readTimetable(path);
+          extracted = [
+            for (final e in grid)
+              SubjectModel(name: e.name, scheduleSlot: e.slot, days: e.days)
+          ];
+        } catch (e) {
+          debugPrint('Grid reader error: $e');
+        }
+      }
+      if (extracted.isEmpty && path != null) {
         final rec = TextRecognizer();
         try {
           final out = await rec.processImage(InputImage.fromFilePath(path));
