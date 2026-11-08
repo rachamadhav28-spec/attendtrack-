@@ -410,6 +410,7 @@ class AppNavBar extends StatelessWidget {
   static const _items = [
     (Icons.home_rounded, 'Home'),
     (Icons.calendar_month_rounded, 'History'),
+    (Icons.celebration_rounded, 'Holidays'),
     (Icons.qr_code_2_rounded, 'QR'),
     (Icons.person_rounded, 'Profile'),
   ];

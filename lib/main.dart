@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'splash.dart';
+import 'holidays.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
@@ -192,6 +193,7 @@ class CloudBackupService {
         'userName': userName,
         'course': course,
         'year': year,
+        'state': (await SharedPreferences.getInstance()).getString('state') ?? '',
         'timetableFileName': timetableFileName,
         'subjects': subjects.map((s) => s.toJson()).toList(),
         'holidays': holidays,
@@ -285,7 +287,7 @@ class _RootFlowControllerState extends State<RootFlowController> {
         onCompletedOpenProfile: () {
           setState(() {
             _isOnboarded = true;
-            _initialDashboardTab = 3;
+            _initialDashboardTab = 4;
           });
         },
       );
@@ -315,6 +317,7 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
   final TextEditingController _nameCtrl = TextEditingController();
   final TextEditingController _emailCtrl = TextEditingController();
   final TextEditingController _courseCtrl = TextEditingController();
+  String _selectedState = '';
   String _selectedCourse = 'B.Tech';
   String _selectedYear = '2nd Year';
   bool _isRestoring = false;
@@ -338,6 +341,7 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
         _courseCtrl.text = c == 'Other' ? '' : c;
       }
       _selectedYear = prefs.getString('year') ?? '2nd Year';
+      _selectedState = prefs.getString('state') ?? '';
     });
   }
 
@@ -385,6 +389,7 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
     await prefs.setString('user_email', email);
     await prefs.setString('course', data['course'] ?? 'B.Tech');
     await prefs.setString('year', data['year'] ?? '2nd Year');
+    await prefs.setString('state', data['state'] ?? '');
     await prefs.setString(
         'timetable_file', data['timetableFileName'] ?? 'Restored from Cloud');
     if (data['subjects'] != null) {
@@ -424,6 +429,7 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
             ? _courseCtrl.text.trim()
             : _selectedCourse);
     await prefs.setString('year', _selectedYear);
+    await prefs.setString('state', _selectedState);
 
     if ((prefs.getString('subjects') ?? '').isEmpty) {
       final defaultSubs = <SubjectModel>[
@@ -539,6 +545,34 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
                   ),
                 );
               }).toList(),
+            ),
+          ),
+          const SizedBox(height: 16),
+          FadeSlideIn(index: 5, child: _fieldLabel('State (for holidays)')),
+          const SizedBox(height: 8),
+          FadeSlideIn(
+            index: 5,
+            child: PressScale(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () async {
+                  final v = await pickState(context, _selectedState);
+                  if (v != null) setState(() => _selectedState = v);
+                },
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.location_on_outlined),
+                      suffixIcon: Icon(Icons.keyboard_arrow_down_rounded)),
+                  child: Text(
+                    _selectedState.isEmpty ? 'Select your state' : _selectedState,
+                    style: TextStyle(
+                        fontSize: 16,
+                        color: _selectedState.isEmpty
+                            ? AppColors.muted
+                            : AppColors.ink),
+                  ),
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -658,6 +692,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
   String _userEmail = 'student@gmail.com';
   String _course = 'B.Tech';
   String _year = '2nd Year';
+  String _stateName = '';
   String _timetableFile = 'No PDF uploaded yet';
   String _lastBackup = 'Just now';
   bool _isReadingTimetable = false;
@@ -739,6 +774,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       _userEmail = prefs.getString('user_email') ?? 'student@gmail.com';
       _course = prefs.getString('course') ?? 'B.Tech';
       _year = prefs.getString('year') ?? '2nd Year';
+      _stateName = prefs.getString('state') ?? '';
       _timetableFile =
           prefs.getString('timetable_file') ?? 'No PDF uploaded yet';
       _lastBackup = prefs.getString('last_cloud_backup') ?? 'Just now';
@@ -1468,6 +1504,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     final pages = <Widget Function()>[
       _buildHomeTab,
       _buildHistoryTab,
+      _buildHolidaysTab,
       _buildQrAndStatsTab,
       _buildProfileAndTimetableTab,
     ];
@@ -1550,7 +1587,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 ),
               ),
               IconButton(
-                onPressed: () => setState(() => _currentTab = 3),
+                onPressed: () => setState(() => _currentTab = 4),
                 icon: const Icon(Icons.upload_file_rounded, color: Colors.white),
                 tooltip: 'Upload timetable',
               ),
@@ -1814,6 +1851,131 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildHolidaysTab() {
+    final today = DateTime.now();
+    final start = DateTime(today.year, today.month, today.day);
+    final list = holidaysForState(_stateName)
+        .where((h) => !h.date.isBefore(start))
+        .toList();
+    final children = <Widget>[];
+    if (_stateName.isEmpty) {
+      children.add(FadeSlideIn(
+        child: SoftCard(
+          child: Column(
+            children: [
+              const Text('Pick your state to see its holidays.',
+                  style: TextStyle(color: AppColors.muted, fontSize: 14)),
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: () async {
+                  final v = await pickState(context, _stateName);
+                  if (v == null) return;
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setString('state', v);
+                  if (mounted) setState(() => _stateName = v);
+                },
+                child: const Text('Choose state'),
+              ),
+            ],
+          ),
+        ),
+      ));
+    } else if (list.isEmpty) {
+      children.add(const FadeSlideIn(
+        child: SoftCard(
+          child: Center(
+            child: Text('No more holidays in the list.',
+                style: TextStyle(color: AppColors.muted, fontSize: 14)),
+          ),
+        ),
+      ));
+    } else {
+      String month = '';
+      var i = 0;
+      for (final h in list) {
+        final m = DateFormat('MMMM yyyy').format(h.date);
+        if (m != month) {
+          month = m;
+          children.add(Padding(
+            padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
+            child: Text(m,
+                style: const TextStyle(
+                    color: AppColors.ink,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600)),
+          ));
+        }
+        final days = h.date.difference(start).inDays;
+        children.add(FadeSlideIn(
+          index: i++ < 8 ? i : 8,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: SoftCard(
+              child: Row(
+                children: [
+                  Container(
+                    width: 52,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.tint,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(DateFormat('d').format(h.date),
+                            style: const TextStyle(
+                                color: AppColors.primary,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700)),
+                        Text(DateFormat('MMM').format(h.date),
+                            style: const TextStyle(
+                                color: AppColors.muted, fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(h.name,
+                            style: const TextStyle(
+                                color: AppColors.ink,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 4),
+                        Text(
+                            '${DateFormat('EEEE').format(h.date)} • ${days == 0 ? 'Today' : days == 1 ? 'Tomorrow' : 'in $days days'}',
+                            style: const TextStyle(
+                                color: AppColors.muted, fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ));
+      }
+    }
+    return BoldPage(
+      header: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Holidays',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600)),
+          const SizedBox(height: 4),
+          Text(_stateName.isEmpty ? 'No state selected' : _stateName,
+              style: const TextStyle(color: Colors.white, fontSize: 13)),
+        ],
+      ),
+      children: children,
     );
   }
 
@@ -2189,6 +2351,8 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 _profileRow('Course', _course),
                 const SizedBox(height: 8),
                 _profileRow('Year', _year),
+                const SizedBox(height: 8),
+                _profileRow('State', _stateName.isEmpty ? 'Not set' : _stateName),
               ],
             ),
           ),
