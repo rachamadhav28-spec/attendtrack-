@@ -726,6 +726,8 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
 
   List<SubjectModel> _subjects = [];
   Set<String> _holidays = {};
+  Map<String, String> _holidayNames = {};
+  Set<String> _hiddenHols = {}; // 'yyyy-MM-dd|name' of state holidays removed
   List<AttendanceLogItem> _historyLogs = [];
   DateTime _selectedCalendarDate = DateTime.now();
 
@@ -780,6 +782,9 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       _lastBackup = prefs.getString('last_cloud_backup') ?? 'Just now';
       _subjects = decodedSubs.map((e) => SubjectModel.fromJson(e)).toList();
       _holidays = (prefs.getStringList('holidays') ?? []).toSet();
+      _holidayNames = Map<String, String>.from(
+          jsonDecode(prefs.getString('holiday_names') ?? '{}') as Map);
+      _hiddenHols = (prefs.getStringList('hidden_hols') ?? []).toSet();
       _historyLogs =
           decodedLogs.map((e) => AttendanceLogItem.fromJson(e)).toList();
     });
@@ -1854,13 +1859,162 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     );
   }
 
+  String _dk(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
+
+  List<Holiday> _stateHols() => holidaysForState(_stateName)
+      .where((h) => !_hiddenHols.contains('${_dk(h.date)}|${h.name}'))
+      .toList();
+
+  Future<void> _saveHolidayExtras() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('holidays', _holidays.toList());
+    await prefs.setString('holiday_names', jsonEncode(_holidayNames));
+    await prefs.setStringList('hidden_hols', _hiddenHols.toList());
+  }
+
+  void _undoSnack(String text, VoidCallback undo) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(text),
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+            label: 'Undo',
+            textColor: Colors.white,
+            onPressed: () {
+              setState(undo);
+              _saveHolidayExtras();
+            }),
+      ));
+  }
+
+  void _removeMyHoliday(String key) {
+    final name = _holidayNames[key];
+    setState(() {
+      _holidays.remove(key);
+      _holidayNames.remove(key);
+    });
+    _saveHolidayExtras();
+    _undoSnack('Holiday removed', () {
+      _holidays.add(key);
+      if (name != null) _holidayNames[key] = name;
+    });
+  }
+
+  void _hideStateHoliday(Holiday h) {
+    final k = '${_dk(h.date)}|${h.name}';
+    setState(() => _hiddenHols.add(k));
+    _saveHolidayExtras();
+    _undoSnack('Holiday hidden', () => _hiddenHols.remove(k));
+  }
+
+  Future<void> _addMyHoliday() async {
+    final d = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2024),
+      lastDate: DateTime(2030),
+    );
+    if (d == null || !mounted) return;
+    final ctrl = TextEditingController();
+    final name = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => SheetDialog(
+        title: const Text('Holiday name'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(
+              hintText: 'Optional, e.g. College fest'),
+        ),
+        actions: [
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+              child: const Text('Add')),
+        ],
+      ),
+    );
+    if (name == null) return;
+    setState(() {
+      _holidays.add(_dk(d));
+      if (name.isNotEmpty) _holidayNames[_dk(d)] = name;
+    });
+    _saveHolidayExtras();
+  }
+
   Widget _buildHolidaysTab() {
     final today = DateTime.now();
     final start = DateTime(today.year, today.month, today.day);
-    final list = holidaysForState(_stateName)
-        .where((h) => !h.date.isBefore(start))
-        .toList();
-    final children = <Widget>[];
+    final list =
+        _stateHols().where((h) => !h.date.isBefore(start)).toList();
+    final mine = _holidays.toList()..sort();
+    final children = <Widget>[
+      Row(
+        children: [
+          const Expanded(
+            child: Text('My holidays',
+                style: TextStyle(
+                    color: AppColors.ink,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600)),
+          ),
+          TextButton.icon(
+            onPressed: _addMyHoliday,
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Add'),
+          ),
+        ],
+      ),
+      if (mine.isEmpty)
+        const Padding(
+          padding: EdgeInsets.only(bottom: 8),
+          child: Text('Days you mark yourself show up here.',
+              style: TextStyle(color: AppColors.muted, fontSize: 13)),
+        ),
+      for (final k in mine)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: SoftCard(
+            child: Row(
+              children: [
+                const Icon(Icons.event_available_rounded,
+                    color: AppColors.primary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(_holidayNames[k] ?? 'Holiday',
+                          style: const TextStyle(
+                              color: AppColors.ink,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600)),
+                      Text(
+                          DateFormat('EEEE, d MMM yyyy')
+                              .format(DateTime.parse(k)),
+                          style: const TextStyle(
+                              color: AppColors.muted, fontSize: 13)),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Remove',
+                  onPressed: () => _removeMyHoliday(k),
+                  icon: const Icon(Icons.delete_outline_rounded,
+                      color: AppColors.bad),
+                ),
+              ],
+            ),
+          ),
+        ),
+      const SizedBox(height: 8),
+    ];
     if (_stateName.isEmpty) {
       children.add(FadeSlideIn(
         child: SoftCard(
@@ -1954,6 +2108,12 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                       ],
                     ),
                   ),
+                  IconButton(
+                    tooltip: 'Hide',
+                    onPressed: () => _hideStateHoliday(h),
+                    icon: const Icon(Icons.close_rounded,
+                        color: AppColors.muted),
+                  ),
                 ],
               ),
             ),
@@ -1984,11 +2144,11 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     final dayLogs =
         _historyLogs.where((l) => l.dateKey == selectedKey).toList();
     final isHoliday = _holidays.contains(selectedKey);
-    final stateHolNames = {
-      for (final h in holidaysForState(_stateName))
-        DateFormat('yyyy-MM-dd').format(h.date): h.name
-    };
-    final stateHolName = stateHolNames[selectedKey];
+    final stateHolList =
+        _stateHols().where((h) => _dk(h.date) == selectedKey).toList();
+    final stateHolNames = {for (final h in _stateHols()) _dk(h.date): h.name};
+    final stateHolName =
+        stateHolList.isEmpty ? null : stateHolList.map((h) => h.name).join(', ');
     final presentCount = dayLogs.where((l) => l.present).length;
     final absentCount = dayLogs.length - presentCount;
 
@@ -2019,14 +2179,12 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 foregroundColor: Colors.white,
               ),
               onPressed: () {
-                setState(() {
-                  if (isHoliday) {
-                    _holidays.remove(selectedKey);
-                  } else {
-                    _holidays.add(selectedKey);
-                  }
-                });
-                _saveAllData();
+                if (isHoliday) {
+                  _removeMyHoliday(selectedKey);
+                } else {
+                  setState(() => _holidays.add(selectedKey));
+                  _saveAllData();
+                }
               },
               icon: const Icon(Icons.wb_sunny_outlined, size: 18),
               label: Text(isHoliday ? 'Unmark holiday' : 'Mark holiday'),
@@ -2088,6 +2246,10 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                     child: Text(stateHolName,
                         style: const TextStyle(
                             fontSize: 14, color: AppColors.ink)),
+                  ),
+                  TextButton(
+                    onPressed: () => _hideStateHoliday(stateHolList.first),
+                    child: const Text('Remove'),
                   ),
                 ],
               ),
