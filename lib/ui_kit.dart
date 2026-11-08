@@ -21,26 +21,16 @@ class Palette {
 }
 
 const List<Palette> kPalettes = [
-  Palette('Forest',
-      primary: Color(0xFF15271B),
-      primarySoft: Color(0xFF223E27),
-      ink: Color(0xFF15271B),
-      muted: Color(0xFF5C4A33),
-      bg: Color(0xFFEDECE7),
-      tint: Color(0xFFE0E5D8),
-      line: Color(0xFFD9D8D0),
-      accent: Color(0xFFB98B35),
-      peach: Color(0xFF9F8467)),
-  Palette('Teal',
-      primary: Color(0xFF167F70),
-      primarySoft: Color(0xFF26A391),
-      ink: Color(0xFF0E3B35),
-      muted: Color(0xFF6B5A52),
-      bg: Color(0xFFF3EFEE),
-      tint: Color(0xFFD5F6EF),
-      line: Color(0xFFDDD6D4),
-      accent: Color(0xFF3EEDD0),
-      peach: Color(0xFFD6A489)),
+  Palette('Hunter & Cream',
+      primary: Color(0xFF355E3B),
+      primarySoft: Color(0xFF4A7350),
+      ink: Color(0xFF1B3320),
+      muted: Color(0xFF4F6B54),
+      bg: Color(0xFFFFFDD0),
+      tint: Color(0xFFF2EEB6),
+      line: Color(0xFFE2DEA8),
+      accent: Color(0xFFFFFDD0),
+      peach: Color(0xFF9DBB9F)),
 ];
 
 class AppColors {

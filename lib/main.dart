@@ -2497,96 +2497,11 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     );
   }
 
-  Widget _paletteCard() {
-    return FadeSlideIn(
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: SoftCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Colour theme',
-                  style: TextStyle(
-                      color: AppColors.ink,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600)),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  for (var i = 0; i < kPalettes.length; i++) ...[
-                    if (i > 0) const SizedBox(width: 12),
-                    Expanded(
-                      child: PressScale(
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(16),
-                          onTap: () => setPalette(i),
-                          child: AnimatedContainer(
-                            duration: kFast,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                  color: AppColors.index == i
-                                      ? AppColors.primary
-                                      : AppColors.line,
-                                  width: AppColors.index == i ? 2 : 1),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    for (final c in [
-                                      kPalettes[i].primary,
-                                      kPalettes[i].primarySoft,
-                                      kPalettes[i].accent,
-                                      kPalettes[i].peach,
-                                      kPalettes[i].bg,
-                                    ])
-                                      Expanded(
-                                        child: Container(
-                                          height: 20,
-                                          margin: const EdgeInsets.only(right: 2),
-                                          decoration: BoxDecoration(
-                                              color: c,
-                                              borderRadius:
-                                                  BorderRadius.circular(6),
-                                              border: Border.all(
-                                                  color: AppColors.line)),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Text('Group ${i + 1} • ${kPalettes[i].name}',
-                                    style: TextStyle(
-                                        fontSize: 13,
-                                        color: AppColors.ink,
-                                        fontWeight: AppColors.index == i
-                                            ? FontWeight.w600
-                                            : FontWeight.w400)),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildProfileAndTimetableTab() {
     final signedIn = CloudBackupService.user != null;
     return BoldPage(
       header: Row(
         children: [
-        _paletteCard(),
           CircleAvatar(
             radius: 28,
             backgroundColor: AppColors.primarySoft,
