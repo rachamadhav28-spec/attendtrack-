@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'ui_kit.dart';
 
-const Color _kMint = Color(0xFF16B77C);
-const Color _kBadge = Color(0xFF0A6B47);
+const Color _kBg = Color(0xFF070E16);
+const Color _kBadge = Color(0xFF594838);
 
 class SplashScreen extends StatefulWidget {
   final VoidCallback onDone;
@@ -59,7 +59,7 @@ class _SplashScreenState extends State<SplashScreen>
     final name = _iv(0.40, 0.62);
     final tag = _iv(0.50, 0.72);
     return Scaffold(
-      backgroundColor: _kMint,
+      backgroundColor: _kBg,
       body: Center(
         child: AnimatedBuilder(
           animation: _c,
@@ -120,17 +120,17 @@ class LogoPainter extends CustomPainter {
     final fill = Paint()..style = PaintingStyle.fill;
     RRect rr(double x, double y, double w, double h, double r) =>
         RRect.fromRectAndRadius(Rect.fromLTWH(x, y, w, h), Radius.circular(r));
-    canvas.drawRRect(rr(0, 0, 200, 200, 46), fill..color = Colors.white);
-    canvas.drawRRect(rr(44, 52, 112, 104, 16), fill..color = const Color(0xFFE0F8EC));
+    canvas.drawRRect(rr(0, 0, 200, 200, 46), fill..color = const Color(0xFFF1CB78));
+    canvas.drawRRect(rr(44, 52, 112, 104, 16), fill..color = const Color(0xFFFFFFFF));
     canvas.drawRRect(
         RRect.fromRectAndCorners(const Rect.fromLTWH(44, 52, 112, 30),
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16)),
-        fill..color = _kMint);
+        fill..color = const Color(0xFF070E16));
     for (final x in [72.0, 118.0]) {
-      canvas.drawRRect(rr(x, 40, 10, 24, 5), fill..color = const Color(0xFF083D2C));
+      canvas.drawRRect(rr(x, 40, 10, 24, 5), fill..color = const Color(0xFF594838));
     }
-    fill.color = const Color(0xFFA9D9C3);
+    fill.color = const Color(0xFFD7D4CF);
     for (final o in const [
       Offset(70, 104), Offset(100, 104), Offset(130, 104),
       Offset(70, 130), Offset(100, 130)

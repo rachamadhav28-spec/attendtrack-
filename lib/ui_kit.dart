@@ -5,18 +5,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class AppColors {
-  static const Color primary = Color(0xFF0E9F6E);
-  static const Color primarySoft = Color(0xFF3DDC97);
-  static const Color navy = Color(0xFF083D2C);
-  static const Color ink = Color(0xFF0E2A20);
-  static const Color muted = Color(0xFF4C6B5E);
-  static const Color bg = Color(0xFFF1FCF6);
-  static const Color tint = Color(0xFFE0F8EC);
-  static const Color line = Color(0xFFD9EBE1);
-  static const Color good = Color(0xFF0A6B47);
-  static const Color goodSoft = Color(0xFFE3F5EA);
+  static const Color primary = Color(0xFF070E16);
+  static const Color accent = Color(0xFFF1CB78);
+  static const Color peach = Color(0xFFF4BE80);
+  static const Color primarySoft = Color(0xFF22303F);
+  static const Color navy = Color(0xFF070E16);
+  static const Color ink = Color(0xFF070E16);
+  static const Color muted = Color(0xFF594838);
+  static const Color bg = Color(0xFFF1EDE6);
+  static const Color tint = Color(0xFFF8E9C9);
+  static const Color line = Color(0xFFD7D4CF);
+  static const Color good = Color(0xFF2E6B3A);
+  static const Color goodSoft = Color(0xFFE4EFDF);
   static const Color bad = Color(0xFFB3261E);
-  static const Color badSoft = Color(0xFFFDE7E4);
+  static const Color badSoft = Color(0xFFF9E3DC);
 }
 
 const Duration kFast = Duration(milliseconds: 160);
@@ -220,7 +222,7 @@ class PctRing extends StatelessWidget {
     required this.pct,
     this.size = 112,
     this.stroke = 10,
-    this.color = Colors.white,
+    this.color = AppColors.accent,
     this.track = AppColors.primarySoft,
     this.textStyle,
   });
