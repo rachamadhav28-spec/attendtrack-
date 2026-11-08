@@ -380,13 +380,20 @@ class _HolidayCalendarState extends State<HolidayCalendar> {
             ),
           ],
         ),
-        GridView.count(
-          crossAxisCount: 7,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: 1.1,
-          children: cells,
-        ),
+        for (var r = 0; r * 7 < cells.length; r++)
+          Row(
+            children: [
+              for (var c = 0; c < 7; c++)
+                Expanded(
+                  child: SizedBox(
+                    height: 46,
+                    child: r * 7 + c < cells.length
+                        ? cells[r * 7 + c]
+                        : const SizedBox.shrink(),
+                  ),
+                ),
+            ],
+          ),
       ],
     );
   }
