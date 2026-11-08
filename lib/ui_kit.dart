@@ -537,10 +537,49 @@ class AppNavBar extends StatelessWidget {
 }
 
 /// Blue top area with a rounded sheet over it. Scrolls as one page.
-class BoldPage extends StatelessWidget {
+class BoldPage extends StatefulWidget {
   final Widget header;
   final List<Widget> children;
   const BoldPage({super.key, required this.header, required this.children});
+
+  @override
+  State<BoldPage> createState() => _BoldPageState();
+}
+
+class _BoldPageState extends State<BoldPage> {
+  final _ctrl = ScrollController();
+  final _headerKey = GlobalKey();
+  bool _snapping = false;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  /// How far the page scrolls before only a thin green strip is left.
+  double get _collapse {
+    final h = _headerKey.currentContext?.size?.height ?? 0;
+    final top = MediaQuery.of(context).padding.top;
+    return (h - top - 8).clamp(0.0, double.infinity);
+  }
+
+  // A small scroll snaps the header closed (or back open) with an animation.
+  bool _onScroll(ScrollNotification n) {
+    if (n is ScrollEndNotification && !_snapping && _ctrl.hasClients) {
+      final max = _collapse;
+      final o = _ctrl.offset;
+      if (max > 0 && o > 0 && o < max) {
+        _snapping = true;
+        _ctrl
+            .animateTo(o > max * 0.15 ? max : 0,
+                duration: reduceMotion(context) ? Duration.zero : kMed,
+                curve: Curves.easeOutCubic)
+            .whenComplete(() => _snapping = false);
+      }
+    }
+    return false;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -548,36 +587,41 @@ class BoldPage extends StatelessWidget {
       value: SystemUiOverlayStyle.light,
       child: Container(
         color: AppColors.primary,
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                    16, MediaQuery.of(context).padding.top + 16, 16, 24),
-                child: header,
-              ),
-            ),
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.bg,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-                ),
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: children,
+        child: NotificationListener<ScrollNotification>(
+          onNotification: _onScroll,
+          child: CustomScrollView(
+            controller: _ctrl,
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  key: _headerKey,
+                  padding: EdgeInsets.fromLTRB(
+                      16, MediaQuery.of(context).padding.top + 16, 16, 24),
+                  child: widget.header,
                 ),
               ),
-            ),
-          ],
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.bg,
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(28)),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: widget.children,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
-
 
 /// Bottom-sheet body with the same title / content / actions shape as AlertDialog.
 class SheetDialog extends StatelessWidget {
