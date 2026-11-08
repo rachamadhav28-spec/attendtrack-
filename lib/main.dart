@@ -55,6 +55,15 @@ class AttendanceAppLogo extends StatelessWidget {
       child: CustomPaint(painter: LogoPainter(1, 1)));
 }
 
+const kTimeSlots = [
+  '10:00 AM - 11:00 AM',
+  '11:00 AM - 12:00 PM',
+  '12:00 PM - 01:00 PM',
+  '02:00 PM - 03:00 PM',
+  '03:00 PM - 04:00 PM',
+  '04:00 PM - 05:00 PM',
+];
+
 class SubjectModel {
   String name;
   int attendedHours;
@@ -998,9 +1007,11 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
   void _showEditScannedTimetableDialog(List<SubjectModel> draftList) {
     final List<TextEditingController> ctrls =
         draftList.map((s) => TextEditingController(text: s.name)).toList();
-    final List<TextEditingController> slotCtrls = draftList
-        .map((s) => TextEditingController(text: s.scheduleSlot))
-        .toList();
+    final List<String> slotList = draftList.map((s) {
+      return kTimeSlots.contains(s.scheduleSlot)
+          ? s.scheduleSlot
+          : kTimeSlots.first;
+    }).toList();
     final List<List<String>> daysList =
         draftList.map((s) => List<String>.from(s.days)).toList();
 
@@ -1055,7 +1066,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                                 onPressed: () {
                                   setDialogState(() {
                                     ctrls.removeAt(idx);
-                                    slotCtrls.removeAt(idx);
+                                    slotList.removeAt(idx);
                                     daysList.removeAt(idx);
                                   });
                                 },
@@ -1065,13 +1076,35 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                             ],
                           ),
                           const SizedBox(height: 6),
-                          TextField(
-                            controller: slotCtrls[idx],
-                            decoration: const InputDecoration(
-                              labelText: 'Class Time (e.g. 09:30 AM - 10:30 AM)',
-                              prefixIcon: Icon(Icons.access_time, size: 18),
-                              isDense: true,
-                            ),
+                          const SizedBox(height: 4),
+                          Wrap(
+                            spacing: 4,
+                            runSpacing: 4,
+                            children: kTimeSlots.map((slot) {
+                              final sel = slotList[idx] == slot;
+                              return GestureDetector(
+                                onTap: () => setDialogState(
+                                    () => slotList[idx] = slot),
+                                child: AnimatedContainer(
+                                  duration: kFast,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: sel
+                                        ? AppColors.primary
+                                        : AppColors.tint,
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Text(slot,
+                                      style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: sel
+                                              ? Colors.white
+                                              : AppColors.primary)),
+                                ),
+                              );
+                            }).toList(),
                           ),
                           const SizedBox(height: 6),
                           Wrap(
@@ -1102,8 +1135,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                     onPressed: () {
                       setDialogState(() {
                         ctrls.add(TextEditingController(text: 'New Subject'));
-                        slotCtrls.add(TextEditingController(
-                            text: '09:30 AM - 10:30 AM'));
+                        slotList.add(kTimeSlots.first);
                         daysList.add(['Mon', 'Wed', 'Fri']);
                       });
                     },
@@ -1128,9 +1160,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                     finalSubs.add(
                       SubjectModel(
                         name: text,
-                        scheduleSlot: slotCtrls[i].text.trim().isEmpty
-                            ? '09:30 AM - 10:30 AM'
-                            : slotCtrls[i].text.trim(),
+                        scheduleSlot: slotList[i],
                         days: daysList[i].isEmpty
                             ? ['Mon', 'Wed', 'Fri']
                             : daysList[i],
@@ -1156,7 +1186,9 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
   void _showEditSingleSubjectDialog(int subIndex) {
     final sub = _subjects[subIndex];
     final nameCtrl = TextEditingController(text: sub.name);
-    final slotCtrl = TextEditingController(text: sub.scheduleSlot);
+    String selectedSlot = kTimeSlots.contains(sub.scheduleSlot)
+        ? sub.scheduleSlot
+        : kTimeSlots.first;
     final attCtrl = TextEditingController(text: sub.attendedHours.toString());
     final totCtrl = TextEditingController(text: sub.totalHours.toString());
     final List<String> selectedDays = List<String>.from(sub.days);
@@ -1171,10 +1203,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       ),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => SheetDialog(
-          title: const Text(
-            'Edit subject',
-            
-          ),
+          title: const Text('Edit subject'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1184,13 +1213,38 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                   controller: nameCtrl,
                   decoration: const InputDecoration(labelText: 'Subject Name'),
                 ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: slotCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Class time, e.g. 09:30 AM - 10:30 AM',
-                    prefixIcon: Icon(Icons.access_time_rounded),
-                  ),
+                const SizedBox(height: 14),
+                Text('Class time',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: AppColors.ink)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: kTimeSlots.map((slot) {
+                    final sel = selectedSlot == slot;
+                    return GestureDetector(
+                      onTap: () => setDialogState(() => selectedSlot = slot),
+                      child: AnimatedContainer(
+                        duration: kFast,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: sel ? AppColors.primary : AppColors.tint,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(slot,
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: sel
+                                    ? Colors.white
+                                    : AppColors.primary)),
+                      ),
+                    );
+                  }).toList(),
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -1199,9 +1253,8 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                       child: TextField(
                         controller: attCtrl,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Attended',
-                        ),
+                        decoration:
+                            const InputDecoration(labelText: 'Attended'),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -1209,21 +1262,18 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                       child: TextField(
                         controller: totCtrl,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Total classes',
-                        ),
+                        decoration:
+                            const InputDecoration(labelText: 'Total classes'),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 14),
-                Text(
-                  'Class days',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                      color: AppColors.ink),
-                ),
+                Text('Class days',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: AppColors.ink)),
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 6,
@@ -1268,10 +1318,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                   _subjects[subIndex].name = nameCtrl.text.trim().isEmpty
                       ? _subjects[subIndex].name
                       : nameCtrl.text.trim();
-                  _subjects[subIndex].scheduleSlot =
-                      slotCtrl.text.trim().isEmpty
-                          ? '09:30 AM - 10:30 AM'
-                          : slotCtrl.text.trim();
+                  _subjects[subIndex].scheduleSlot = selectedSlot;
                   _subjects[subIndex].attendedHours = att < 0 ? 0 : att;
                   _subjects[subIndex].totalHours = tot < att ? att : tot;
                   _subjects[subIndex].days = selectedDays.isEmpty
@@ -1659,11 +1706,9 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
         FadeSlideIn(
           child: Row(
             children: [
-              _statCard('Total hours', _totalConducted, AppColors.ink),
+              _tapStatCard('Present', _totalPresent, AppColors.good, true),
               const SizedBox(width: 8),
-              _statCard('Present', _totalPresent, AppColors.good),
-              const SizedBox(width: 8),
-              _statCard('Absent', _totalAbsent, AppColors.bad),
+              _tapStatCard('Absent', _totalAbsent, AppColors.bad, false),
             ],
           ),
         ),
@@ -1872,6 +1917,121 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     );
   }
 
+  Widget _tapStatCard(String label, int val, Color color, bool isPresent) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => _showAttendanceList(isPresent),
+        child: SoftCard(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                Text(label,
+                    style:
+                        TextStyle(fontSize: 13, color: AppColors.muted)),
+                const Spacer(),
+                Icon(Icons.chevron_right_rounded,
+                    size: 16, color: AppColors.muted),
+              ]),
+              const SizedBox(height: 4),
+              CountUp(
+                value: val,
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: color),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAttendanceList(bool isPresent) {
+    final logs = _attendanceLogs
+        .where((l) => l.present == isPresent)
+        .toList()
+      ..sort((a, b) => b.dateKey.compareTo(a.dateKey));
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: false,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => SheetDialog(
+        title: Text(
+          isPresent ? 'Classes Attended' : 'Classes Missed',
+        ),
+        content: SizedBox(
+          height: MediaQuery.of(ctx).size.height * 0.55,
+          child: logs.isEmpty
+              ? Center(
+                  child: Text(
+                    isPresent
+                        ? 'No classes attended yet'
+                        : 'No absences yet 🎉',
+                    style: TextStyle(color: AppColors.muted, fontSize: 15),
+                  ),
+                )
+              : ListView.separated(
+                  itemCount: logs.length,
+                  separatorBuilder: (_, __) => Divider(
+                      height: 1, color: AppColors.line),
+                  itemBuilder: (_, i) {
+                    final item = logs[i];
+                    // parse dateKey yyyy-MM-dd
+                    DateTime? dt;
+                    try {
+                      dt = DateTime.parse(item.dateKey);
+                    } catch (_) {}
+                    final dateStr = dt != null
+                        ? DateFormat('EEE, d MMM yyyy').format(dt)
+                        : item.dateKey;
+                    return ListTile(
+                      dense: true,
+                      leading: CircleAvatar(
+                        radius: 16,
+                        backgroundColor: isPresent
+                            ? AppColors.goodSoft
+                            : AppColors.badSoft,
+                        child: Icon(
+                          isPresent
+                              ? Icons.check_rounded
+                              : Icons.close_rounded,
+                          size: 16,
+                          color:
+                              isPresent ? AppColors.good : AppColors.bad,
+                        ),
+                      ),
+                      title: Text(item.subject,
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.ink,
+                              fontSize: 14)),
+                      subtitle: Text(
+                        '$dateStr${item.timeStr.isNotEmpty ? " • ${item.timeStr}" : ""}',
+                        style: TextStyle(
+                            color: AppColors.muted, fontSize: 12),
+                      ),
+                    );
+                  },
+                ),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _dk(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
 
   List<Holiday> _stateHols() => holidaysForState(_stateName)
@@ -2031,22 +2191,41 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     if (_stateName.isEmpty) {
       children.add(FadeSlideIn(
         child: SoftCard(
-          child: Column(
-            children: [
-              Text('Pick your state to see its holidays.',
-                  style: TextStyle(color: AppColors.muted, fontSize: 14)),
-              const SizedBox(height: 12),
-              FilledButton(
-                onPressed: () async {
-                  final v = await pickState(context, _stateName);
-                  if (v == null) return;
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setString('state', v);
-                  if (mounted) setState(() => _stateName = v);
-                },
-                child: const Text('Choose state'),
-              ),
-            ],
+          padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
+          child: SizedBox(
+            width: double.infinity,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.location_on_outlined,
+                    size: 48, color: AppColors.primary.withOpacity(0.5)),
+                const SizedBox(height: 12),
+                Text('Pick your state to see holidays',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: AppColors.ink,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                Text('State holidays will show here and in the calendar.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppColors.muted, fontSize: 13)),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () async {
+                      final v = await pickState(context, _stateName);
+                      if (v == null) return;
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setString('state', v);
+                      if (mounted) setState(() => _stateName = v);
+                    },
+                    child: const Text('Choose state'),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ));

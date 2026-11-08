@@ -310,6 +310,50 @@ Future<String?> pickState(BuildContext context, String current) {
   );
 }
 
+/// Tiny beach-chair + umbrella icon used as a holiday marker.
+class _BeachIconPainter extends CustomPainter {
+  final Color color;
+  _BeachIconPainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()..color = color..strokeCap = StrokeCap.round..style = PaintingStyle.fill;
+    final w = size.width; final h = size.height;
+    // umbrella arc
+    final arcR = w * 0.42;
+    final cx = w * 0.32; final cy = h * 0.32;
+    canvas.drawArc(Rect.fromCircle(center: Offset(cx, cy), radius: arcR),
+        3.14159, 3.14159, true, p);
+    // umbrella pole
+    p.style = PaintingStyle.stroke; p.strokeWidth = w * 0.09;
+    canvas.drawLine(Offset(cx, cy), Offset(cx + w*0.08, h*0.95), p);
+    p.style = PaintingStyle.fill;
+    // lounge chair body
+    final chairPath = Path()
+      ..moveTo(w*0.42, h*0.72)
+      ..lineTo(w*0.98, h*0.56)
+      ..lineTo(w*1.0, h*0.65)
+      ..lineTo(w*0.46, h*0.82)
+      ..close();
+    canvas.drawPath(chairPath, p);
+    // chair back
+    final backPath = Path()
+      ..moveTo(w*0.42, h*0.72)
+      ..lineTo(w*0.46, h*0.42)
+      ..lineTo(w*0.54, h*0.46)
+      ..lineTo(w*0.46, h*0.82)
+      ..close();
+    canvas.drawPath(backPath, p);
+    // legs
+    p.style = PaintingStyle.stroke; p.strokeWidth = w*0.09;
+    canvas.drawLine(Offset(w*0.52, h*0.78), Offset(w*0.50, h*0.98), p);
+    canvas.drawLine(Offset(w*0.78, h*0.68), Offset(w*0.76, h*0.90), p);
+  }
+
+  @override
+  bool shouldRepaint(_BeachIconPainter old) => old.color != color;
+}
+
 /// Month grid. A dot marks a state holiday; a tinted cell marks a day you
 /// marked as holiday yourself.
 class HolidayCalendar extends StatefulWidget {
@@ -422,17 +466,15 @@ class _HolidayCalendarState extends State<HolidayCalendar> {
                     fontSize: 14,
                     fontWeight: sel ? FontWeight.w700 : FontWeight.w400,
                     color: sel ? Colors.white : AppColors.ink)),
-            const SizedBox(height: 2),
-            Container(
-              width: 5,
-              height: 5,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: state
-                    ? (sel ? Colors.white : AppColors.bad)
-                    : Colors.transparent,
-              ),
-            ),
+            const SizedBox(height: 1),
+            if (state)
+              CustomPaint(
+                size: const Size(10, 8),
+                painter: _BeachIconPainter(
+                    sel ? Colors.white : AppColors.bad),
+              )
+            else
+              const SizedBox(height: 8),
           ],
         ),
       ),
