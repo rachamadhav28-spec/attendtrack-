@@ -26,6 +26,7 @@ Future<void> main() async {
   } catch (e) {
     debugPrint('Firebase init: $e');
   }
+  await loadPalette();
   runApp(const AttendTrackApp());
 }
 
@@ -614,7 +615,7 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
+                  Row(
                     children: [
                       Icon(Icons.restore_rounded, color: AppColors.primary),
                       SizedBox(width: 8),
@@ -628,7 +629,7 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Sign in with the Google account you used before to restore your subjects and attendance.',
                     style: TextStyle(fontSize: 13, color: AppColors.muted),
                   ),
@@ -668,7 +669,7 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
 
   Widget _fieldLabel(String t) => Text(
         t,
-        style: const TextStyle(
+        style: TextStyle(
             fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink),
       );
 }
@@ -1023,7 +1024,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
+                  Text(
                     'Fix any name and tap the days each class happens, then save.',
                     style: TextStyle(fontSize: 13, color: AppColors.muted),
                   ),
@@ -1058,7 +1059,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                                     daysList.removeAt(idx);
                                   });
                                 },
-                                icon: const Icon(Icons.delete_outline,
+                                icon: Icon(Icons.delete_outline,
                                     color: AppColors.bad),
                               ),
                             ],
@@ -1216,7 +1217,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                   ],
                 ),
                 const SizedBox(height: 14),
-                const Text(
+                Text(
                   'Class days',
                   style: TextStyle(
                       fontWeight: FontWeight.w600,
@@ -1253,7 +1254,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 _saveAllData();
                 Navigator.pop(ctx);
               },
-              child: const Text('Delete', style: TextStyle(color: AppColors.bad)),
+              child: Text('Delete', style: TextStyle(color: AppColors.bad)),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx),
@@ -1693,7 +1694,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 activeDay == 'All'
                     ? 'All subjects (${_subjects.length})'
                     : "${_fullDayNames[activeDay]}'s classes (${visibleSubjects.length})",
-                style: const TextStyle(
+                style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 16,
                     color: AppColors.ink),
@@ -1721,7 +1722,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                       ? 'No subjects yet. Tap Add subject, or import a timetable from the Profile tab.'
                       : 'No classes on this day.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                  style: TextStyle(fontSize: 13, color: AppColors.muted),
                 ),
               ),
             ),
@@ -1767,7 +1768,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                       children: [
                         Text(
                           sub.name,
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                               color: AppColors.ink),
@@ -1775,7 +1776,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                         const SizedBox(height: 4),
                         Text(
                           '${sub.scheduleSlot} • ${sub.days.join(", ")}',
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontSize: 13, color: AppColors.muted),
                         ),
                       ],
@@ -1783,7 +1784,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                   ),
                   IconButton(
                     onPressed: () => _showEditSingleSubjectDialog(i),
-                    icon: const Icon(Icons.edit_outlined,
+                    icon: Icon(Icons.edit_outlined,
                         size: 20, color: AppColors.primary),
                     tooltip: 'Edit subject',
                   ),
@@ -1799,7 +1800,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 ok
                     ? 'Safe to skip ${sub.safeBunks} classes • Attended ${sub.attendedHours} of ${sub.totalHours}'
                     : 'Attend next ${sub.classesNeededFor75} classes for 75% • Attended ${sub.attendedHours} of ${sub.totalHours}',
-                style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                style: TextStyle(fontSize: 13, color: AppColors.muted),
               ),
               const SizedBox(height: 12),
               Row(
@@ -1858,7 +1859,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(label,
-                style: const TextStyle(fontSize: 13, color: AppColors.muted)),
+                style: TextStyle(fontSize: 13, color: AppColors.muted)),
             const SizedBox(height: 4),
             CountUp(
               value: val,
@@ -1969,7 +1970,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     final children = <Widget>[
       Row(
         children: [
-          const Expanded(
+          Expanded(
             child: Text('My holidays',
                 style: TextStyle(
                     color: AppColors.ink,
@@ -1984,7 +1985,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
         ],
       ),
       if (mine.isEmpty)
-        const Padding(
+        Padding(
           padding: EdgeInsets.only(bottom: 8),
           child: Text('Days you mark yourself show up here.',
               style: TextStyle(color: AppColors.muted, fontSize: 13)),
@@ -1995,7 +1996,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
           child: SoftCard(
             child: Row(
               children: [
-                const Icon(Icons.event_available_rounded,
+                Icon(Icons.event_available_rounded,
                     color: AppColors.primary),
                 const SizedBox(width: 12),
                 Expanded(
@@ -2003,14 +2004,14 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(_holidayNames[k] ?? 'Holiday',
-                          style: const TextStyle(
+                          style: TextStyle(
                               color: AppColors.ink,
                               fontSize: 16,
                               fontWeight: FontWeight.w600)),
                       Text(
                           DateFormat('EEEE, d MMM yyyy')
                               .format(DateTime.parse(k)),
-                          style: const TextStyle(
+                          style: TextStyle(
                               color: AppColors.muted, fontSize: 13)),
                     ],
                   ),
@@ -2018,7 +2019,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 IconButton(
                   tooltip: 'Remove',
                   onPressed: () => _removeMyHoliday(k),
-                  icon: const Icon(Icons.delete_outline_rounded,
+                  icon: Icon(Icons.delete_outline_rounded,
                       color: AppColors.bad),
                 ),
               ],
@@ -2032,7 +2033,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
         child: SoftCard(
           child: Column(
             children: [
-              const Text('Pick your state to see its holidays.',
+              Text('Pick your state to see its holidays.',
                   style: TextStyle(color: AppColors.muted, fontSize: 14)),
               const SizedBox(height: 12),
               FilledButton(
@@ -2050,7 +2051,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
         ),
       ));
     } else if (list.isEmpty) {
-      children.add(const FadeSlideIn(
+      children.add(FadeSlideIn(
         child: SoftCard(
           child: Center(
             child: Text('No more holidays in the list.',
@@ -2068,7 +2069,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
           children.add(Padding(
             padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
             child: Text(m,
-                style: const TextStyle(
+                style: TextStyle(
                     color: AppColors.ink,
                     fontSize: 16,
                     fontWeight: FontWeight.w600)),
@@ -2092,12 +2093,12 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                     child: Column(
                       children: [
                         Text(DateFormat('d').format(h.date),
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: AppColors.primary,
                                 fontSize: 20,
                                 fontWeight: FontWeight.w700)),
                         Text(DateFormat('MMM').format(h.date),
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: AppColors.muted, fontSize: 13)),
                       ],
                     ),
@@ -2108,14 +2109,14 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(h.name,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: AppColors.ink,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600)),
                         const SizedBox(height: 4),
                         Text(
                             '${DateFormat('EEEE').format(h.date)} • ${days == 0 ? 'Today' : days == 1 ? 'Tomorrow' : 'in $days days'}',
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: AppColors.muted, fontSize: 13)),
                       ],
                     ),
@@ -2123,7 +2124,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                   IconButton(
                     tooltip: 'Hide',
                     onPressed: () => _hideStateHoliday(h),
-                    icon: const Icon(Icons.close_rounded,
+                    icon: Icon(Icons.close_rounded,
                         color: AppColors.muted),
                   ),
                 ],
@@ -2224,7 +2225,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
           curve: Curves.easeOutCubic,
           alignment: Alignment.topCenter,
           child: isHoliday
-              ? const Padding(
+              ? Padding(
                   padding: EdgeInsets.only(top: 12),
                   child: SoftCard(
                     color: AppColors.tint,
@@ -2252,11 +2253,11 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
               color: AppColors.badSoft,
               child: Row(
                 children: [
-                  const Icon(Icons.celebration_rounded, color: AppColors.bad),
+                  Icon(Icons.celebration_rounded, color: AppColors.bad),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(stateHolName,
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 14, color: AppColors.ink)),
                   ),
                   TextButton(
@@ -2273,7 +2274,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
             Expanded(
               child: Text(
                 'Logs on $selectedKey',
-                style: const TextStyle(
+                style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 16,
                     color: AppColors.ink),
@@ -2281,13 +2282,13 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
             ),
             Text(
               'Present $presentCount • Absent $absentCount',
-              style: const TextStyle(fontSize: 13, color: AppColors.muted),
+              style: TextStyle(fontSize: 13, color: AppColors.muted),
             ),
           ],
         ),
         const SizedBox(height: 8),
         if (dayLogs.isEmpty)
-          const FadeSlideIn(
+          FadeSlideIn(
             child: SoftCard(
               child: Center(
                 child: Text(
@@ -2325,13 +2326,13 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(item.subject,
-                                style: const TextStyle(
+                                style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
                                     color: AppColors.ink)),
                             Text(
                               '${item.present ? "Present" : "Absent"} (${item.hours}h) • ${item.timeStr}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                   fontSize: 13, color: AppColors.muted),
                             ),
                           ],
@@ -2381,7 +2382,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
           ),
           child: Text(
             'Theme: ${style.name}',
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: AppColors.primary),
@@ -2390,7 +2391,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
         const SizedBox(height: 4),
         Text(
           code6,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.w600,
             letterSpacing: 4,
@@ -2453,7 +2454,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                const Text(
+                Text(
                   'Your timetable QR',
                   style: TextStyle(
                       fontWeight: FontWeight.w600,
@@ -2496,11 +2497,96 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     );
   }
 
+  Widget _paletteCard() {
+    return FadeSlideIn(
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: SoftCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Colour theme',
+                  style: TextStyle(
+                      color: AppColors.ink,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600)),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  for (var i = 0; i < kPalettes.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 12),
+                    Expanded(
+                      child: PressScale(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () => setPalette(i),
+                          child: AnimatedContainer(
+                            duration: kFast,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                  color: AppColors.index == i
+                                      ? AppColors.primary
+                                      : AppColors.line,
+                                  width: AppColors.index == i ? 2 : 1),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    for (final c in [
+                                      kPalettes[i].primary,
+                                      kPalettes[i].primarySoft,
+                                      kPalettes[i].accent,
+                                      kPalettes[i].peach,
+                                      kPalettes[i].bg,
+                                    ])
+                                      Expanded(
+                                        child: Container(
+                                          height: 20,
+                                          margin: const EdgeInsets.only(right: 2),
+                                          decoration: BoxDecoration(
+                                              color: c,
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                              border: Border.all(
+                                                  color: AppColors.line)),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text('Group ${i + 1} • ${kPalettes[i].name}',
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        color: AppColors.ink,
+                                        fontWeight: AppColors.index == i
+                                            ? FontWeight.w600
+                                            : FontWeight.w400)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildProfileAndTimetableTab() {
     final signedIn = CloudBackupService.user != null;
     return BoldPage(
       header: Row(
         children: [
+        _paletteCard(),
           CircleAvatar(
             radius: 28,
             backgroundColor: AppColors.primarySoft,
@@ -2564,7 +2650,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
                     Icon(Icons.picture_as_pdf_rounded,
                         color: AppColors.primary),
@@ -2580,7 +2666,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 Text(
                   'File: $_timetableFile (${_subjects.length} subjects)',
                   style:
-                      const TextStyle(fontSize: 13, color: AppColors.muted),
+                      TextStyle(fontSize: 13, color: AppColors.muted),
                 ),
                 AnimatedSize(
                   duration: kMed,
@@ -2625,7 +2711,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                       color: signedIn ? AppColors.good : AppColors.muted,
                     ),
                     const SizedBox(width: 8),
-                    const Text('Cloud backup',
+                    Text('Cloud backup',
                         style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -2638,7 +2724,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                       ? 'Not signed in. Cloud backup is off.'
                       : 'Last synced: $_lastBackup • ${CloudBackupService.user?.email ?? _userEmail}',
                   style:
-                      const TextStyle(fontSize: 13, color: AppColors.muted),
+                      TextStyle(fontSize: 13, color: AppColors.muted),
                 ),
                 const SizedBox(height: 12),
                 if (!signedIn) ...[
@@ -2677,12 +2763,12 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label,
-            style: const TextStyle(fontSize: 13, color: AppColors.muted)),
+            style: TextStyle(fontSize: 13, color: AppColors.muted)),
         Flexible(
           child: Text(
             val,
             textAlign: TextAlign.right,
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: AppColors.ink),

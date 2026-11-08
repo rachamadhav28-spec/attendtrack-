@@ -283,7 +283,7 @@ Future<String?> pickState(BuildContext context, String current) {
             decoration: BoxDecoration(
                 color: AppColors.line, borderRadius: BorderRadius.circular(2)),
           ),
-          const Padding(
+          Padding(
             padding: EdgeInsets.all(16),
             child: Text('Choose your state',
                 style: TextStyle(
@@ -298,7 +298,7 @@ Future<String?> pickState(BuildContext context, String current) {
               itemBuilder: (_, i) => ListTile(
                 title: Text(names[i]),
                 trailing: names[i] == current
-                    ? const Icon(Icons.check_rounded, color: AppColors.primary)
+                    ? Icon(Icons.check_rounded, color: AppColors.primary)
                     : null,
                 onTap: () => Navigator.pop(ctx, names[i]),
               ),
@@ -350,7 +350,7 @@ class _HolidayCalendarState extends State<HolidayCalendar> {
       for (final d in const ['S', 'M', 'T', 'W', 'T', 'F', 'S'])
         Center(
             child: Text(d,
-                style: const TextStyle(color: AppColors.muted, fontSize: 13))),
+                style: TextStyle(color: AppColors.muted, fontSize: 13))),
       for (var i = 0; i < lead; i++) const SizedBox.shrink(),
       for (var day = 1; day <= count; day++)
         _cell(DateTime(_month.year, _month.month, day)),
@@ -367,7 +367,7 @@ class _HolidayCalendarState extends State<HolidayCalendar> {
             Expanded(
               child: Center(
                 child: Text('${_names[_month.month - 1]} ${_month.year}',
-                    style: const TextStyle(
+                    style: TextStyle(
                         color: AppColors.ink,
                         fontSize: 16,
                         fontWeight: FontWeight.w600)),

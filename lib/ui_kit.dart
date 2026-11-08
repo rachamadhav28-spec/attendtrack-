@@ -3,22 +3,84 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class Palette {
+  final String name;
+  final Color primary, primarySoft, ink, muted, bg, tint, line, accent, peach;
+  const Palette(this.name,
+      {required this.primary,
+      required this.primarySoft,
+      required this.ink,
+      required this.muted,
+      required this.bg,
+      required this.tint,
+      required this.line,
+      required this.accent,
+      required this.peach});
+}
+
+const List<Palette> kPalettes = [
+  Palette('Forest',
+      primary: Color(0xFF15271B),
+      primarySoft: Color(0xFF223E27),
+      ink: Color(0xFF15271B),
+      muted: Color(0xFF5C4A33),
+      bg: Color(0xFFEDECE7),
+      tint: Color(0xFFE0E5D8),
+      line: Color(0xFFD9D8D0),
+      accent: Color(0xFFB98B35),
+      peach: Color(0xFF9F8467)),
+  Palette('Teal',
+      primary: Color(0xFF167F70),
+      primarySoft: Color(0xFF26A391),
+      ink: Color(0xFF0E3B35),
+      muted: Color(0xFF6B5A52),
+      bg: Color(0xFFF3EFEE),
+      tint: Color(0xFFD5F6EF),
+      line: Color(0xFFDDD6D4),
+      accent: Color(0xFF3EEDD0),
+      peach: Color(0xFFD6A489)),
+];
 
 class AppColors {
-  static const Color primary = Color(0xFF070E16);
-  static const Color accent = Color(0xFFF1CB78);
-  static const Color peach = Color(0xFFF4BE80);
-  static const Color primarySoft = Color(0xFF22303F);
-  static const Color navy = Color(0xFF070E16);
-  static const Color ink = Color(0xFF070E16);
-  static const Color muted = Color(0xFF594838);
-  static const Color bg = Color(0xFFF1EDE6);
-  static const Color tint = Color(0xFFF8E9C9);
-  static const Color line = Color(0xFFD7D4CF);
+  static int index = 0;
+  static Palette get _p => kPalettes[index];
+  static Color get primary => _p.primary;
+  static Color get primarySoft => _p.primarySoft;
+  static Color get accent => _p.accent;
+  static Color get peach => _p.peach;
+  static Color get navy => _p.ink;
+  static Color get ink => _p.ink;
+  static Color get muted => _p.muted;
+  static Color get bg => _p.bg;
+  static Color get tint => _p.tint;
+  static Color get line => _p.line;
   static const Color good = Color(0xFF2E6B3A);
   static const Color goodSoft = Color(0xFFE4EFDF);
   static const Color bad = Color(0xFFB3261E);
   static const Color badSoft = Color(0xFFF9E3DC);
+}
+
+/// Switch palette, remember it, and repaint the whole app in place.
+Future<void> setPalette(int i) async {
+  AppColors.index = i;
+  try {
+    (await SharedPreferences.getInstance()).setInt('palette', i);
+  } catch (_) {}
+  void mark(Element e) {
+    e.markNeedsBuild();
+    e.visitChildren(mark);
+  }
+
+  WidgetsBinding.instance.rootElement?.visitChildren(mark);
+}
+
+Future<void> loadPalette() async {
+  try {
+    final i = (await SharedPreferences.getInstance()).getInt('palette') ?? 0;
+    AppColors.index = i.clamp(0, kPalettes.length - 1);
+  } catch (_) {}
 }
 
 const Duration kFast = Duration(milliseconds: 160);
@@ -41,7 +103,7 @@ class AppTheme {
       pageTransitionsTheme: const PageTransitionsTheme(builders: {
         TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
       }),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -68,7 +130,7 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(0, 48),
           foregroundColor: AppColors.primary,
-          side: const BorderSide(color: AppColors.line),
+          side: BorderSide(color: AppColors.line),
           textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -88,24 +150,24 @@ class AppTheme {
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.line),
+          borderSide: BorderSide(color: AppColors.line),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.line),
+          borderSide: BorderSide(color: AppColors.line),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+          borderSide: BorderSide(color: AppColors.primary, width: 2),
         ),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
-        titleTextStyle: const TextStyle(
+        titleTextStyle: TextStyle(
             color: AppColors.ink, fontSize: 18, fontWeight: FontWeight.w700),
         contentTextStyle:
-            const TextStyle(color: AppColors.muted, fontSize: 14),
+            TextStyle(color: AppColors.muted, fontSize: 14),
         actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       ),
@@ -118,7 +180,7 @@ class AppTheme {
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.tint,
         side: BorderSide.none,
-        labelStyle: const TextStyle(fontSize: 13, color: AppColors.ink),
+        labelStyle: TextStyle(fontSize: 13, color: AppColors.ink),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
@@ -217,15 +279,16 @@ class PctRing extends StatelessWidget {
   final Color color;
   final Color track;
   final TextStyle? textStyle;
-  const PctRing({
+  PctRing({
     super.key,
     required this.pct,
     this.size = 112,
     this.stroke = 10,
-    this.color = AppColors.accent,
-    this.track = AppColors.primarySoft,
+    Color? color,
+    Color? track,
     this.textStyle,
-  });
+  })  : color = color ?? AppColors.accent,
+        track = track ?? AppColors.primarySoft;
 
   @override
   Widget build(BuildContext context) {
@@ -289,13 +352,13 @@ class AnimatedBar extends StatelessWidget {
   final Color color;
   final Color track;
   final double height;
-  const AnimatedBar({
+  AnimatedBar({
     super.key,
     required this.value,
     required this.color,
-    this.track = AppColors.line,
+    Color? track,
     this.height = 6,
-  });
+  }) : track = track ?? AppColors.line;
 
   @override
   Widget build(BuildContext context) {
@@ -420,7 +483,7 @@ class AppNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
         border: Border(top: BorderSide(color: AppColors.line)),
       ),
@@ -507,7 +570,7 @@ class BoldPage extends StatelessWidget {
             SliverFillRemaining(
               hasScrollBody: false,
               child: Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: AppColors.bg,
                   borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
                 ),
@@ -558,7 +621,7 @@ class SheetDialog extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             DefaultTextStyle(
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppColors.ink,
                   fontSize: 20,
                   fontWeight: FontWeight.w700),

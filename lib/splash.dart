@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'ui_kit.dart';
 
-const Color _kBg = Color(0xFF070E16);
-const Color _kBadge = Color(0xFF594838);
 
 class SplashScreen extends StatefulWidget {
   final VoidCallback onDone;
@@ -59,7 +57,7 @@ class _SplashScreenState extends State<SplashScreen>
     final name = _iv(0.40, 0.62);
     final tag = _iv(0.50, 0.72);
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: AppColors.primary,
       body: Center(
         child: AnimatedBuilder(
           animation: _c,
@@ -120,17 +118,17 @@ class LogoPainter extends CustomPainter {
     final fill = Paint()..style = PaintingStyle.fill;
     RRect rr(double x, double y, double w, double h, double r) =>
         RRect.fromRectAndRadius(Rect.fromLTWH(x, y, w, h), Radius.circular(r));
-    canvas.drawRRect(rr(0, 0, 200, 200, 46), fill..color = const Color(0xFFF1CB78));
-    canvas.drawRRect(rr(44, 52, 112, 104, 16), fill..color = const Color(0xFFFFFFFF));
+    canvas.drawRRect(rr(0, 0, 200, 200, 46), fill..color = AppColors.accent);
+    canvas.drawRRect(rr(44, 52, 112, 104, 16), fill..color = Colors.white);
     canvas.drawRRect(
         RRect.fromRectAndCorners(const Rect.fromLTWH(44, 52, 112, 30),
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16)),
-        fill..color = const Color(0xFF070E16));
+        fill..color = AppColors.primary);
     for (final x in [72.0, 118.0]) {
-      canvas.drawRRect(rr(x, 40, 10, 24, 5), fill..color = const Color(0xFF594838));
+      canvas.drawRRect(rr(x, 40, 10, 24, 5), fill..color = AppColors.peach);
     }
-    fill.color = const Color(0xFFD7D4CF);
+    fill.color = AppColors.line;
     for (final o in const [
       Offset(70, 104), Offset(100, 104), Offset(130, 104),
       Offset(70, 130), Offset(100, 130)
@@ -143,7 +141,7 @@ class LogoPainter extends CustomPainter {
       canvas.translate(150, 150);
       canvas.scale(s);
       canvas.drawCircle(Offset.zero, 33, fill..color = Colors.white);
-      canvas.drawCircle(Offset.zero, 30, fill..color = _kBadge);
+      canvas.drawCircle(Offset.zero, 30, fill..color = AppColors.ink);
       if (tick > 0) {
         final path = Path()
           ..moveTo(-14, 0)
