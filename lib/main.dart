@@ -2003,7 +2003,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
   }
 
   void _showSubjectAttendanceLog(SubjectModel sub) {
-    final logs = _attendanceLogs
+    final logs = _historyLogs
         .where((l) => l.subject == sub.name)
         .toList()
       ..sort((a, b) => b.dateKey.compareTo(a.dateKey));
@@ -2136,7 +2136,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
   }
 
   void _showAttendanceList(bool isPresent) {
-    final logs = _attendanceLogs
+    final logs = _historyLogs
         .where((l) => l.present == isPresent)
         .toList()
       ..sort((a, b) => b.dateKey.compareTo(a.dateKey));

@@ -568,8 +568,8 @@ class _BeachIconPainter extends CustomPainter {
       final inner = sunR + w * 0.06;
       final outer = sunR + w * 0.14;
       canvas.drawLine(
-        Offset(sunCx + inner * cos(angle), sunCy + inner * sin(angle)),
-        Offset(sunCx + outer * cos(angle), sunCy + outer * sin(angle)),
+        Offset(sunCx + inner * _math.cos(angle), sunCy + inner * _math.sin(angle)),
+        Offset(sunCx + outer * _math.cos(angle), sunCy + outer * _math.sin(angle)),
         rayP,
       );
     }
@@ -610,18 +610,6 @@ class _BeachIconPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_BeachIconPainter old) => old.color != color;
-}
-
-double cos(double a) => _mathCos(a);
-double sin(double a) => _mathSin(a);
-double _mathCos(double a) {
-  // Dart's dart:math is imported in this file already
-  import 'dart:math' as math;
-  return math.cos(a);
-}
-double _mathSin(double a) {
-  import 'dart:math' as math;
-  return math.sin(a);
 }
 
 /// Blue top area with a rounded sheet over it. Scrolls as one page.
