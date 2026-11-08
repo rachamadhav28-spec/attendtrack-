@@ -13,6 +13,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'ui_kit.dart';
 
 Future<void> main() async {
@@ -146,12 +147,24 @@ class CloudBackupService {
   }
 
   /// Google sign-in. Same Google account = same uid after reinstall.
+  static String lastError = '';
+
   static Future<User?> signInWithGoogle() async {
+    lastError = '';
     try {
-      final cred =
-          await FirebaseAuth.instance.signInWithProvider(GoogleAuthProvider());
+      final g = await GoogleSignIn().signIn();
+      if (g == null) {
+        lastError = 'Sign-in cancelled.';
+        return null;
+      }
+      final a = await g.authentication;
+      final cred = await FirebaseAuth.instance.signInWithCredential(
+        GoogleAuthProvider.credential(
+            accessToken: a.accessToken, idToken: a.idToken),
+      );
       return cred.user;
     } catch (e) {
+      lastError = e.toString();
       debugPrint('Google sign-in error: $e');
       return null;
     }
@@ -343,8 +356,9 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
       if (!mounted) return;
       setState(() => _isRestoring = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Google sign-in failed. Check internet and try again.'),
+        SnackBar(
+          content: Text('Google sign-in failed: ${CloudBackupService.lastError}'),
+          duration: const Duration(seconds: 8),
         ),
       );
       return;
@@ -1267,8 +1281,9 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     if (!mounted) return;
     if (u == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Google sign-in failed. Check internet and try again.')),
+        SnackBar(
+            content: Text('Google sign-in failed: ${CloudBackupService.lastError}'),
+            duration: const Duration(seconds: 8)),
       );
       return;
     }
@@ -1361,16 +1376,8 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     final controller = MobileScannerController(
       facing: CameraFacing.back,
       detectionSpeed: DetectionSpeed.noDuplicates,
-      autoStart: false,
     );
     bool handled = false;
-    // Start after the sheet has finished sliding in, so the camera
-    // does not race the animation (a common cause of genericError).
-    Future.delayed(const Duration(milliseconds: 450), () async {
-      try {
-        await controller.start();
-      } catch (_) {}
-    });
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1386,7 +1393,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
           children: [
             MobileScanner(
               controller: controller,
-              errorBuilder: (context, error, child) => Center(
+              errorBuilder: (context, error) => Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: Column(
