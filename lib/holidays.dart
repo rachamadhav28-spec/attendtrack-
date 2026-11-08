@@ -311,9 +311,9 @@ Future<String?> pickState(BuildContext context, String current) {
 }
 
 /// Tiny beach-chair + umbrella icon used as a holiday marker.
-class _BeachIconPainter extends CustomPainter {
+class HolidayBeachPainter extends CustomPainter {
   final Color color;
-  _BeachIconPainter(this.color);
+  HolidayBeachPainter(this.color);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -351,7 +351,7 @@ class _BeachIconPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_BeachIconPainter old) => old.color != color;
+  bool shouldRepaint(HolidayBeachPainter old) => old.color != color;
 }
 
 /// Month grid. A dot marks a state holiday; a tinted cell marks a day you
@@ -470,7 +470,7 @@ class _HolidayCalendarState extends State<HolidayCalendar> {
             if (state)
               CustomPaint(
                 size: const Size(10, 8),
-                painter: _BeachIconPainter(
+                painter: HolidayBeachPainter(
                     sel ? Colors.white : AppColors.bad),
               )
             else

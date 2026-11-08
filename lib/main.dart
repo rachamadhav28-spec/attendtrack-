@@ -56,12 +56,20 @@ class AttendanceAppLogo extends StatelessWidget {
 }
 
 const kTimeSlots = [
+  // Single-hour slots
   '10:00 AM - 11:00 AM',
   '11:00 AM - 12:00 PM',
   '12:00 PM - 01:00 PM',
   '02:00 PM - 03:00 PM',
   '03:00 PM - 04:00 PM',
   '04:00 PM - 05:00 PM',
+  // Double slots
+  '10:00 AM - 12:00 PM',
+  '11:00 AM - 01:00 PM',
+  '01:00 PM - 03:00 PM',
+  '02:00 PM - 05:00 PM',
+  '10:00 AM - 01:00 PM',
+  '02:00 PM - 05:00 PM',
 ];
 
 class SubjectModel {
@@ -1186,9 +1194,10 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
   void _showEditSingleSubjectDialog(int subIndex) {
     final sub = _subjects[subIndex];
     final nameCtrl = TextEditingController(text: sub.name);
-    String selectedSlot = kTimeSlots.contains(sub.scheduleSlot)
-        ? sub.scheduleSlot
-        : kTimeSlots.first;
+    final isCustom = !kTimeSlots.contains(sub.scheduleSlot);
+    String selectedSlot = isCustom ? '__custom__' : sub.scheduleSlot;
+    final customCtrl = TextEditingController(
+        text: isCustom ? sub.scheduleSlot : '');
     final attCtrl = TextEditingController(text: sub.attendedHours.toString());
     final totCtrl = TextEditingController(text: sub.totalHours.toString());
     final List<String> selectedDays = List<String>.from(sub.days);
@@ -1223,29 +1232,65 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
-                  children: kTimeSlots.map((slot) {
-                    final sel = selectedSlot == slot;
-                    return GestureDetector(
-                      onTap: () => setDialogState(() => selectedSlot = slot),
+                  children: [
+                    ...kTimeSlots.map((slot) {
+                      final sel = selectedSlot == slot;
+                      return GestureDetector(
+                        onTap: () =>
+                            setDialogState(() => selectedSlot = slot),
+                        child: AnimatedContainer(
+                          duration: kFast,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: sel ? AppColors.primary : AppColors.tint,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(slot,
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: sel
+                                      ? Colors.white
+                                      : AppColors.primary)),
+                        ),
+                      );
+                    }),
+                    GestureDetector(
+                      onTap: () => setDialogState(
+                          () => selectedSlot = '__custom__'),
                       child: AnimatedContainer(
                         duration: kFast,
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: sel ? AppColors.primary : AppColors.tint,
+                          color: selectedSlot == '__custom__'
+                              ? AppColors.primary
+                              : AppColors.tint,
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: Text(slot,
+                        child: Text('Custom',
                             style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
-                                color: sel
+                                color: selectedSlot == '__custom__'
                                     ? Colors.white
                                     : AppColors.primary)),
                       ),
-                    );
-                  }).toList(),
+                    ),
+                  ],
                 ),
+                if (selectedSlot == '__custom__') ...[
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: customCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'e.g. 08:00 AM - 09:00 AM',
+                      prefixIcon: Icon(Icons.access_time_rounded),
+                      isDense: true,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -1318,7 +1363,12 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                   _subjects[subIndex].name = nameCtrl.text.trim().isEmpty
                       ? _subjects[subIndex].name
                       : nameCtrl.text.trim();
-                  _subjects[subIndex].scheduleSlot = selectedSlot;
+                  _subjects[subIndex].scheduleSlot =
+                      selectedSlot == '__custom__'
+                          ? (customCtrl.text.trim().isEmpty
+                              ? kTimeSlots.first
+                              : customCtrl.text.trim())
+                          : selectedSlot;
                   _subjects[subIndex].attendedHours = att < 0 ? 0 : att;
                   _subjects[subIndex].totalHours = tot < att ? att : tot;
                   _subjects[subIndex].days = selectedDays.isEmpty
@@ -1795,16 +1845,19 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
             children: [
               Row(
                 children: [
-                  PctRing(
-                    pct: sub.percentage,
-                    size: 56,
-                    stroke: 6,
-                    color: pctColor,
-                    track: ok ? AppColors.goodSoft : AppColors.badSoft,
-                    textStyle: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: pctColor),
+                  GestureDetector(
+                    onTap: () => _showSubjectAttendanceLog(sub),
+                    child: PctRing(
+                      pct: sub.percentage,
+                      size: 56,
+                      stroke: 6,
+                      color: pctColor,
+                      track: ok ? AppColors.goodSoft : AppColors.badSoft,
+                      textStyle: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: pctColor),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -1945,6 +1998,139 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showSubjectAttendanceLog(SubjectModel sub) {
+    final logs = _attendanceLogs
+        .where((l) => l.subject == sub.name)
+        .toList()
+      ..sort((a, b) => b.dateKey.compareTo(a.dateKey));
+
+    final attended = logs.where((l) => l.present).length;
+    final missed = logs.where((l) => !l.present).length;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: false,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => SheetDialog(
+        title: Text(sub.name),
+        content: SizedBox(
+          height: MediaQuery.of(ctx).size.height * 0.6,
+          child: Column(
+            children: [
+              Row(children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.goodSoft,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(children: [
+                      Text('$attended',
+                          style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.good)),
+                      Text('Attended',
+                          style: TextStyle(
+                              fontSize: 12, color: AppColors.muted)),
+                    ]),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.badSoft,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(children: [
+                      Text('$missed',
+                          style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.bad)),
+                      Text('Missed',
+                          style: TextStyle(
+                              fontSize: 12, color: AppColors.muted)),
+                    ]),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 12),
+              Expanded(
+                child: logs.isEmpty
+                    ? Center(
+                        child: Text('No attendance recorded yet.',
+                            style: TextStyle(
+                                color: AppColors.muted, fontSize: 15)),
+                      )
+                    : ListView.separated(
+                        itemCount: logs.length,
+                        separatorBuilder: (_, __) =>
+                            Divider(height: 1, color: AppColors.line),
+                        itemBuilder: (_, idx) {
+                          final item = logs[idx];
+                          DateTime? dt;
+                          try {
+                            dt = DateTime.parse(item.dateKey);
+                          } catch (_) {}
+                          final dateStr = dt != null
+                              ? DateFormat('EEE, d MMM yyyy').format(dt)
+                              : item.dateKey;
+                          return ListTile(
+                            dense: true,
+                            leading: CircleAvatar(
+                              radius: 16,
+                              backgroundColor: item.present
+                                  ? AppColors.goodSoft
+                                  : AppColors.badSoft,
+                              child: Icon(
+                                item.present
+                                    ? Icons.check_rounded
+                                    : Icons.close_rounded,
+                                size: 16,
+                                color: item.present
+                                    ? AppColors.good
+                                    : AppColors.bad,
+                              ),
+                            ),
+                            title: Text(
+                              item.present ? 'Present' : 'Absent',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: item.present
+                                      ? AppColors.good
+                                      : AppColors.bad,
+                                  fontSize: 14),
+                            ),
+                            subtitle: Text(
+                              '$dateStr${item.timeStr.isNotEmpty ? " • ${item.timeStr}" : ""}',
+                              style: TextStyle(
+                                  color: AppColors.muted, fontSize: 12),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+        ],
       ),
     );
   }
@@ -2287,11 +2473,20 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(h.name,
-                            style: TextStyle(
-                                color: AppColors.ink,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600)),
+                        Row(children: [
+                          CustomPaint(
+                            size: const Size(16, 13),
+                            painter: HolidayBeachPainter(AppColors.primary),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(h.name,
+                                style: TextStyle(
+                                    color: AppColors.ink,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600)),
+                          ),
+                        ]),
                         const SizedBox(height: 4),
                         Text(
                             '${DateFormat('EEEE').format(h.date)} • ${days == 0 ? 'Today' : days == 1 ? 'Tomorrow' : 'in $days days'}',
