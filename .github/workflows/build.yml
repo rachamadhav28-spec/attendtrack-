@@ -59,14 +59,6 @@ jobs:
               t = t.replace('<application', perms, 1)
           t = re.sub(r'android:label="[^"]*"', 'android:label="AttendTrack"', t, count=1)
           open(m, 'w').write(t)
-          # 2) Apply the Google services (Firebase) Gradle plugin
-          for f in glob.glob('android/settings.gradle*'):
-              t = open(f).read()
-              if 'google-services' not in t:
-                  t = re.sub(r'(^[^\n]*com\.android\.application[^\n]*$)',
-                             r'\1\n    id("com.google.gms.google-services") version "4.4.2" apply false',
-                             t, count=1, flags=re.M)
-                  open(f, 'w').write(t)
           # 3) R8: ML Kit text recognition references optional language classes
           open('android/app/proguard-rules.pro', 'w').write('-dontwarn com.google.mlkit.vision.text.**\n')
           for f in glob.glob('android/app/build.gradle*'):
@@ -76,15 +68,7 @@ jobs:
                   rule = ('proguardFiles("proguard-rules.pro")' if kts else "proguardFiles 'proguard-rules.pro'")
                   t = re.sub(r'(release\s*\{)', r'\1\n            ' + rule, t, count=1)
                   open(f, 'w').write(t)
-          for f in glob.glob('android/app/build.gradle*'):
-              t = open(f).read()
-              if 'google-services' not in t:
-                  t = re.sub(r'(^[^\n]*com\.android\.application[^\n]*$)',
-                             r'\1\n    id("com.google.gms.google-services")',
-                             t, count=1, flags=re.M)
-                  open(f, 'w').write(t)
           PY
-          grep -n "google-services" android/settings.gradle* android/app/build.gradle*
           grep -n "permission" android/app/src/main/AndroidManifest.xml
 
       - name: Force compileSdk 36 for all Android modules

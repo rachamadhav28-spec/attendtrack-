@@ -12,20 +12,11 @@ import 'package:qr/qr.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'ui_kit.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  try {
-    await Firebase.initializeApp();
-  } catch (e) {
-    debugPrint('Firebase init: $e');
-  }
   await loadPalette();
   runApp(const AttendTrackApp());
 }
@@ -171,38 +162,19 @@ class AttendanceLogItem {
       );
 }
 
+/// Cloud backup is being moved to Supabase. Until then the app saves on the
+/// phone only, and these calls do nothing.
+class CloudUser {
+  final String? email;
+  const CloudUser(this.email);
+}
+
 class CloudBackupService {
-  static User? get user {
-    try {
-      return FirebaseAuth.instance.currentUser;
-    } catch (_) {
-      return null;
-    }
-  }
+  static CloudUser? get user => null;
 
-  /// Google sign-in. Same Google account = same uid after reinstall.
-  static String lastError = '';
+  static String lastError = 'Cloud backup is being moved to a new service.';
 
-  static Future<User?> signInWithGoogle() async {
-    lastError = '';
-    try {
-      final g = await GoogleSignIn().signIn();
-      if (g == null) {
-        lastError = 'Sign-in cancelled.';
-        return null;
-      }
-      final a = await g.authentication;
-      final cred = await FirebaseAuth.instance.signInWithCredential(
-        GoogleAuthProvider.credential(
-            accessToken: a.accessToken, idToken: a.idToken),
-      );
-      return cred.user;
-    } catch (e) {
-      lastError = e.toString();
-      debugPrint('Google sign-in error: $e');
-      return null;
-    }
-  }
+  static Future<CloudUser?> signInWithGoogle() async => null;
 
   static Future<bool> syncUserToFirestore({
     required String email,
@@ -213,50 +185,11 @@ class CloudBackupService {
     required List<SubjectModel> subjects,
     required List<String> holidays,
     required List<AttendanceLogItem> historyLogs,
-  }) async {
-    final u = user;
-    if (u == null) return false;
-    try {
-      await FirebaseFirestore.instance
-          .collection('student_backups')
-          .doc(u.uid)
-          .set({
-        'email': (u.email ?? email).trim().toLowerCase(),
-        'userName': userName,
-        'course': course,
-        'year': year,
-        'state': (await SharedPreferences.getInstance()).getString('state') ?? '',
-        'holidayNames': (await SharedPreferences.getInstance()).getString('holiday_names') ?? '{}',
-        'hiddenHols': (await SharedPreferences.getInstance()).getStringList('hidden_hols') ?? <String>[],
-        'timetableFileName': timetableFileName,
-        'subjects': subjects.map((s) => s.toJson()).toList(),
-        'holidays': holidays,
-        'historyLogs': historyLogs.map((l) => l.toJson()).toList(),
-        'updatedAt': DateTime.now().toIso8601String(),
-      }, SetOptions(merge: true));
-      return true;
-    } catch (e) {
-      debugPrint('Firestore backup error: $e');
-      return false;
-    }
-  }
+  }) async =>
+      false;
 
-  static Future<Map<String, dynamic>?> restoreUserFromFirestore() async {
-    final u = user;
-    if (u == null) return null;
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('student_backups')
-          .doc(u.uid)
-          .get();
-      if (doc.exists && doc.data() != null) {
-        return doc.data()!;
-      }
-    } catch (e) {
-      debugPrint('Firestore restore error: $e');
-    }
-    return null;
-  }
+  static Future<Map<String, dynamic>?> restoreUserFromFirestore() async =>
+      null;
 }
 
 class AppEntry extends StatefulWidget {
