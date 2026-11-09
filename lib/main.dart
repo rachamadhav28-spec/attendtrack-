@@ -2576,10 +2576,10 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(children: [
-                          CustomPaint(
-                            size: const Size(16, 16),
-                            painter: HolidayBeachPainter(AppColors.primary),
-                          ),
+                          Image.asset('assets/holiday.png',
+                              width: 20,
+                              height: 20,
+                              color: AppColors.primary),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(h.name,
