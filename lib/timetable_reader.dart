@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 
-typedef TtEntry = ({String name, String slot, List<String> days});
+typedef TtEntry = ({String name, String slot, List<String> days, Map<String, String> daySlots});
 
 class _Frag {
   final String text;
@@ -97,7 +97,7 @@ Future<List<TtEntry>> readTimetable(String path) async {
     }
 
     // 4) Drop every cell into (day, column) and group by subject name.
-    final byKey = <String, ({String name, Set<String> days, int col, int row})>{};
+    final byKey = <String, ({String name, Set<String> days, int col, int row, Map<String, String> ds})>{};
     for (final f in frags) {
       if (_dayRx.hasMatch(f.text.trim()) || _timeRx.hasMatch(f.text)) continue;
       if (f.cx < heads.first.cx - colW * 0.6) continue;
@@ -123,9 +123,10 @@ Future<List<TtEntry>> readTimetable(String path) async {
         final old = byKey[key];
         final col = cols.reduce(math.min);
         byKey[key] = old == null
-            ? (name: name, days: {day}, col: col, row: row)
+            ? (name: name, days: {day}, col: col, row: row, ds: {day: slots[col]})
             : (
                 name: old.name,
+                ds: {...old.ds, day: old.ds[day] ?? slots[col]},
                 days: {...old.days, day},
                 col: old.row < row || (old.row == row && old.col <= col)
                     ? old.col
@@ -136,7 +137,7 @@ Future<List<TtEntry>> readTimetable(String path) async {
     }
     return [
       for (final v in byKey.values)
-        (name: v.name, slot: slots[v.col], days: v.days.toList()),
+        (name: v.name, slot: slots[v.col], days: v.days.toList(), daySlots: v.ds),
     ];
   } finally {
     rec.close();

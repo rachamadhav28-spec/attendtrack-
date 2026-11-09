@@ -136,6 +136,7 @@ class AttendanceLogItem {
   final int hours;
   final String dateKey;
   final String timeStr;
+  final String slot;
 
   AttendanceLogItem({
     required this.id,
@@ -144,6 +145,7 @@ class AttendanceLogItem {
     required this.hours,
     required this.dateKey,
     required this.timeStr,
+    this.slot = '',
   });
 
   Map<String, dynamic> toJson() => {
@@ -153,6 +155,7 @@ class AttendanceLogItem {
         'hours': hours,
         'dateKey': dateKey,
         'timeStr': timeStr,
+        'slot': slot,
       };
 
   factory AttendanceLogItem.fromJson(Map<String, dynamic> json) =>
@@ -164,6 +167,7 @@ class AttendanceLogItem {
         dateKey: json['dateKey'] ??
             DateFormat('yyyy-MM-dd').format(DateTime.now()),
         timeStr: json['timeStr'] ?? '',
+        slot: json['slot'] ?? '',
       );
 }
 
@@ -760,6 +764,8 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
   List<SubjectModel> _subjects = [];
   Set<String> _holidays = {};
   Map<String, String> _holidayNames = {};
+  String _holQuery = '';
+  final _holSearchCtrl = TextEditingController();
   Set<String> _hiddenHols = {}; // 'yyyy-MM-dd|name' of state holidays removed
   List<AttendanceLogItem> _historyLogs = [];
   DateTime _selectedCalendarDate = DateTime.now();
@@ -900,6 +906,8 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
           hours: hours,
           dateKey: dateKey,
           timeStr: timeStr,
+          slot: _subjects[index].slotFor(
+              DateFormat('E').format(_selectedCalendarDate)),
         ),
       );
     });
@@ -943,6 +951,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
           totalHours: item.totalHours,
           scheduleSlot: item.scheduleSlot,
           days: item.days.toSet().toList(),
+          daySlots: item.daySlots,
         );
       }
     }
@@ -970,7 +979,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
           final grid = await readTimetable(path);
           extracted = [
             for (final e in grid)
-              SubjectModel(name: e.name, scheduleSlot: e.slot, days: e.days)
+              SubjectModel(name: e.name, scheduleSlot: e.slot, days: e.days, daySlots: e.daySlots)
           ];
         } catch (e) {
           debugPrint('Grid reader error: $e');
@@ -1036,6 +1045,8 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     }).toList();
     final List<List<String>> daysList =
         draftList.map((s) => List<String>.from(s.days)).toList();
+    final List<Map<String, String>> dsList =
+        draftList.map((s) => Map<String, String>.from(s.daySlots)).toList();
 
     showModalBottomSheet(
       context: context,
@@ -1089,6 +1100,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                                   setDialogState(() {
                                     ctrls.removeAt(idx);
                                     slotList.removeAt(idx);
+                                    dsList.removeAt(idx);
                                     daysList.removeAt(idx);
                                   });
                                 },
@@ -1158,6 +1170,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                       setDialogState(() {
                         ctrls.add(TextEditingController(text: 'New Subject'));
                         slotList.add(kTimeSlots.first);
+                        dsList.add({});
                         daysList.add(['Mon', 'Wed', 'Fri']);
                       });
                     },
@@ -1183,6 +1196,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                       SubjectModel(
                         name: text,
                         scheduleSlot: slotList[i],
+                        daySlots: dsList[i],
                         days: daysList[i].isEmpty
                             ? ['Mon', 'Wed', 'Fri']
                             : daysList[i],
@@ -2170,7 +2184,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                                   fontSize: 14),
                             ),
                             subtitle: Text(
-                              '$dateStr${item.timeStr.isNotEmpty ? " • ${item.timeStr}" : ""}',
+                              '${item.slot.isNotEmpty ? '${item.slot}\n' : ''}$dateStr${item.timeStr.isNotEmpty ? " • ${item.timeStr}" : ""}',
                               style: TextStyle(
                                   color: AppColors.muted, fontSize: 12),
                             ),
@@ -2256,7 +2270,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                               color: AppColors.ink,
                               fontSize: 14)),
                       subtitle: Text(
-                        '$dateStr${item.timeStr.isNotEmpty ? " • ${item.timeStr}" : ""}',
+                        '${item.slot.isNotEmpty ? '${item.slot}\n' : ''}$dateStr${item.timeStr.isNotEmpty ? " • ${item.timeStr}" : ""}',
                         style: TextStyle(
                             color: AppColors.muted, fontSize: 12),
                       ),
@@ -2367,10 +2381,41 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
   Widget _buildHolidaysTab() {
     final today = DateTime.now();
     final start = DateTime(today.year, today.month, today.day);
-    final list =
-        _stateHols().where((h) => !h.date.isBefore(start)).toList();
-    final mine = _holidays.toList()..sort();
+    bool match(DateTime d, String name) {
+      final q = _holQuery.trim().toLowerCase();
+      if (q.isEmpty) return true;
+      final hay = '${name.toLowerCase()} '
+          '${DateFormat('EEEE EEE d dd MMMM MMM yyyy M/d d/M').format(d).toLowerCase()}';
+      return q.split(RegExp(r'\s+')).every(hay.contains);
+    }
+
+    final list = _stateHols()
+        .where((h) => !h.date.isBefore(start) && match(h.date, h.name))
+        .toList();
+    final mine = _holidays
+        .where((k) => match(DateTime.parse(k), _holidayNames[k] ?? 'Holiday'))
+        .toList()
+      ..sort();
     final children = <Widget>[
+      TextField(
+        controller: _holSearchCtrl,
+        onChanged: (v) => setState(() => _holQuery = v),
+        decoration: InputDecoration(
+          hintText: 'Search name, month or date',
+          prefixIcon: const Icon(Icons.search_rounded),
+          suffixIcon: _holQuery.isEmpty
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () {
+                    _holSearchCtrl.clear();
+                    setState(() => _holQuery = '');
+                  },
+                ),
+          isDense: true,
+        ),
+      ),
+      const SizedBox(height: 12),
       Row(
         children: [
           Expanded(
@@ -2532,7 +2577,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                       children: [
                         Row(children: [
                           CustomPaint(
-                            size: const Size(16, 13),
+                            size: const Size(16, 16),
                             painter: HolidayBeachPainter(AppColors.primary),
                           ),
                           const SizedBox(width: 6),
@@ -2761,6 +2806,10 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
                                     color: AppColors.ink)),
+                            if (item.slot.isNotEmpty)
+                              Text(item.slot,
+                                  style: TextStyle(
+                                      fontSize: 12, color: AppColors.primary)),
                             Text(
                               '${item.present ? "Present" : "Absent"} (${item.hours}h) • ${item.timeStr}',
                               style: TextStyle(

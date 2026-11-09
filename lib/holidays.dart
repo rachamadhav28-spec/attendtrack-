@@ -310,44 +310,86 @@ Future<String?> pickState(BuildContext context, String current) {
   );
 }
 
-/// Tiny beach-chair + umbrella icon used as a holiday marker.
+/// Holiday symbol: sun, mirrored tilted umbrella and lounge chair.
 class HolidayBeachPainter extends CustomPainter {
   final Color color;
   HolidayBeachPainter(this.color);
 
   @override
   void paint(Canvas canvas, Size size) {
-    final p = Paint()..color = color..strokeCap = StrokeCap.round..style = PaintingStyle.fill;
-    final w = size.width; final h = size.height;
-    // umbrella arc
-    final arcR = w * 0.42;
-    final cx = w * 0.32; final cy = h * 0.32;
-    canvas.drawArc(Rect.fromCircle(center: Offset(cx, cy), radius: arcR),
-        3.14159, 3.14159, true, p);
-    // umbrella pole
-    p.style = PaintingStyle.stroke; p.strokeWidth = w * 0.09;
-    canvas.drawLine(Offset(cx, cy), Offset(cx + w*0.08, h*0.95), p);
-    p.style = PaintingStyle.fill;
-    // lounge chair body
-    final chairPath = Path()
-      ..moveTo(w*0.42, h*0.72)
-      ..lineTo(w*0.98, h*0.56)
-      ..lineTo(w*1.0, h*0.65)
-      ..lineTo(w*0.46, h*0.82)
-      ..close();
-    canvas.drawPath(chairPath, p);
-    // chair back
-    final backPath = Path()
-      ..moveTo(w*0.42, h*0.72)
-      ..lineTo(w*0.46, h*0.42)
-      ..lineTo(w*0.54, h*0.46)
-      ..lineTo(w*0.46, h*0.82)
-      ..close();
-    canvas.drawPath(backPath, p);
-    // legs
-    p.style = PaintingStyle.stroke; p.strokeWidth = w*0.09;
-    canvas.drawLine(Offset(w*0.52, h*0.78), Offset(w*0.50, h*0.98), p);
-    canvas.drawLine(Offset(w*0.78, h*0.68), Offset(w*0.76, h*0.90), p);
+    final k = size.width < size.height * 100 / 102
+        ? size.width / 100
+        : size.height / 102;
+    canvas.save();
+    canvas.scale(k, k);
+    final p = Paint()..color = color;
+    // sun
+    canvas.drawCircle(const Offset(77, 22), 14, p);
+    for (final r in const [
+      [77, 2, 74, 8, 80, 8], [77, 42, 74, 36, 80, 36],
+      [57, 22, 63, 19, 63, 25], [97, 22, 91, 19, 91, 25],
+      [63, 8, 69, 10, 65, 14], [91, 8, 85, 10, 89, 14],
+      [63, 36, 69, 34, 65, 30], [91, 36, 85, 34, 89, 30],
+    ]) {
+      canvas.drawPath(
+          Path()
+            ..moveTo(r[0] + 0.0, r[1] + 0.0)
+            ..lineTo(r[2] + 0.0, r[3] + 0.0)
+            ..lineTo(r[4] + 0.0, r[5] + 0.0)
+            ..close(),
+          p);
+    }
+    // chair (moved left by 7)
+    canvas.drawRRect(
+        RRect.fromLTRBR(2, 84, 60, 94, const Radius.circular(5)), p);
+    canvas.drawPath(
+        Path()
+          ..moveTo(56, 86)
+          ..lineTo(75, 60)
+          ..quadraticBezierTo(79, 55, 84, 59)
+          ..quadraticBezierTo(87, 63, 83, 68)
+          ..lineTo(67, 92)
+          ..lineTo(56, 92)
+          ..close(),
+        p);
+    canvas.drawPath(
+        Path()
+          ..moveTo(8, 93)..lineTo(18, 93)..lineTo(12, 100)..lineTo(4, 100)
+          ..close(),
+        p);
+    canvas.drawPath(
+        Path()
+          ..moveTo(47, 93)..lineTo(57, 93)..lineTo(61, 100)..lineTo(53, 100)
+          ..close(),
+        p);
+    // umbrella (mirrored)
+    canvas.saveLayer(const Rect.fromLTWH(0, 0, 100, 102), Paint());
+    canvas.drawPath(
+        Path()
+          ..moveTo(59.3, 63.5)
+          ..cubicTo(72.5, 27.1, 16.1, 6.6, 2.9, 43.0)
+          ..close(),
+        p);
+    final cut = Paint()
+      ..blendMode = BlendMode.clear
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.2
+      ..strokeCap = StrokeCap.round;
+    for (final e in const [
+      [51.8, 60.8], [38.6, 56.0], [23.6, 50.5], [10.4, 45.7]
+    ]) {
+      canvas.drawLine(const Offset(41, 26), Offset(e[0], e[1]), cut);
+    }
+    canvas.restore();
+    canvas.drawCircle(const Offset(41.5, 24.5), 3, p);
+    canvas.drawLine(
+        const Offset(30.4, 55.1),
+        const Offset(20, 84),
+        Paint()
+          ..color = color
+          ..strokeWidth = 4.2
+          ..strokeCap = StrokeCap.round);
+    canvas.restore();
   }
 
   @override
@@ -469,12 +511,12 @@ class _HolidayCalendarState extends State<HolidayCalendar> {
             const SizedBox(height: 1),
             if (state)
               CustomPaint(
-                size: const Size(10, 8),
+                size: const Size(12, 12),
                 painter: HolidayBeachPainter(
                     sel ? Colors.white : AppColors.bad),
               )
             else
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
           ],
         ),
       ),
