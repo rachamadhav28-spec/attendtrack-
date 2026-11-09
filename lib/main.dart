@@ -1052,7 +1052,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       context: context,
       isScrollControlled: true,
       showDragHandle: false,
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -1235,7 +1235,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       context: context,
       isScrollControlled: true,
       showDragHandle: false,
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -1914,7 +1914,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
         padding: const EdgeInsets.only(bottom: 12),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(18),
             border: Border(left: BorderSide(color: pctColor, width: 6)),
           ),
@@ -2124,7 +2124,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       context: context,
       isScrollControlled: true,
       showDragHandle: false,
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -2254,7 +2254,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       context: context,
       isScrollControlled: true,
       showDragHandle: false,
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -2389,7 +2389,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     final name = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -3064,6 +3064,22 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
         ],
       ),
       children: [
+        FadeSlideIn(
+          child: SoftCard(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text('Dark mode',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w600, color: AppColors.ink)),
+              secondary: Icon(Icons.dark_mode_outlined,
+                  color: AppColors.primary),
+              value: AppColors.isDark,
+              onChanged: (v) => setPalette(v ? 1 : 0),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
         FadeSlideIn(
           child: SoftCard(
             child: Column(

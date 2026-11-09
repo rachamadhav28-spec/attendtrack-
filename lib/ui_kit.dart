@@ -8,9 +8,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class Palette {
   final String name;
-  final Color primary, primarySoft, ink, muted, bg, tint, line, accent, peach;
+  final Color primary, primarySoft, ink, muted, bg, tint, line, accent, peach, surface;
+  final bool dark;
   const Palette(this.name,
-      {required this.primary,
+      {this.surface = Colors.white,
+      this.dark = false,
+      required this.primary,
       required this.primarySoft,
       required this.ink,
       required this.muted,
@@ -32,6 +35,18 @@ const List<Palette> kPalettes = [
       line: Color(0xFFE2DEA8),
       accent: Color(0xFFFFFDD0),
       peach: Color(0xFF9DBB9F)),
+  Palette('Forest Night',
+      dark: true,
+      surface: Color(0xFF182A1B),
+      primary: Color(0xFF4F8A5A),
+      primarySoft: Color(0xFF5FA06B),
+      ink: Color(0xFFE8F0E6),
+      muted: Color(0xFF9DB5A1),
+      bg: Color(0xFF0F1A11),
+      tint: Color(0xFF243628),
+      line: Color(0xFF2F4533),
+      accent: Color(0xFFFFFDD0),
+      peach: Color(0xFF5E7F62)),
 ];
 
 class AppColors {
@@ -47,6 +62,8 @@ class AppColors {
   static Color get bg => _p.bg;
   static Color get tint => _p.tint;
   static Color get line => _p.line;
+  static Color get surface => _p.surface;
+  static bool get isDark => _p.dark;
   static const Color good = Color(0xFF2E6B3A);
   static const Color goodSoft = Color(0xFFE4EFDF);
   static const Color bad = Color(0xFFB3261E);
@@ -84,8 +101,11 @@ class AppTheme {
   static ThemeData get light {
     final scheme = ColorScheme.fromSeed(
       seedColor: AppColors.primary,
+      brightness: AppColors.isDark ? Brightness.dark : Brightness.light,
       primary: AppColors.primary,
-      surface: Colors.white,
+      onPrimary: Colors.white,
+      surface: AppColors.surface,
+      onSurface: AppColors.ink,
     );
     return ThemeData(
       useMaterial3: true,
@@ -102,7 +122,7 @@ class AppTheme {
         systemOverlayStyle: SystemUiOverlayStyle.light,
       ),
       cardTheme: CardThemeData(
-        color: Colors.white,
+        color: AppColors.surface,
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -136,7 +156,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
+        fillColor: AppColors.surface,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
@@ -153,7 +173,7 @@ class AppTheme {
         ),
       ),
       dialogTheme: DialogThemeData(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.surface,
         surfaceTintColor: Colors.transparent,
         titleTextStyle: TextStyle(
             color: AppColors.ink, fontSize: 18, fontWeight: FontWeight.w700),
@@ -374,12 +394,12 @@ class AnimatedBar extends StatelessWidget {
 class SoftCard extends StatelessWidget {
   final Widget child;
   final EdgeInsets padding;
-  final Color color;
+  final Color? color;
   const SoftCard({
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(16),
-    this.color = Colors.white,
+    this.color,
   });
 
   @override
@@ -388,7 +408,7 @@ class SoftCard extends StatelessWidget {
       duration: kMed,
       padding: padding,
       decoration: BoxDecoration(
-        color: color,
+        color: color ?? AppColors.surface,
         borderRadius: BorderRadius.circular(20),
       ),
       child: child,
@@ -475,7 +495,7 @@ class AppNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         border: Border(top: BorderSide(color: AppColors.line)),
       ),
       child: SafeArea(
